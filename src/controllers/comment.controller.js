@@ -33,7 +33,7 @@ export const updateComment = asyncHandler(async (req, res) => {
   const comment = await commentService.updateComment(
     req.params.id,
     req.user.id,
-    req.body
+    req.body,
   );
 
   res.status(200).json({
@@ -74,7 +74,7 @@ export const replyToComment = asyncHandler(async (req, res) => {
   const reply = await commentService.replyToComment(
     req.params.id,
     req.user.id,
-    req.body.content
+    req.body.content,
   );
 
   res.status(201).json({

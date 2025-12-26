@@ -7,12 +7,12 @@ import {
   moderateContent,
   getReports,
 } from "../controllers/admin.controller.js";
-import { authenticate } from "../middlewares/auth.middleware.js";
+import { auth } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
 // All routes require authentication and admin access
-router.use(authenticate);
+router.use(auth);
 
 router.get("/dashboard", getDashboardStats);
 router.get("/users", getUsers);

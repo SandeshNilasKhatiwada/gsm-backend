@@ -173,7 +173,10 @@ class CommentService {
     }
 
     if (comment.userId !== userId) {
-      throw new AppError("You don't have permission to update this comment", 403);
+      throw new AppError(
+        "You don't have permission to update this comment",
+        403,
+      );
     }
 
     const updatedComment = await prisma.comment.update({
@@ -207,7 +210,10 @@ class CommentService {
     }
 
     if (comment.userId !== userId) {
-      throw new AppError("You don't have permission to delete this comment", 403);
+      throw new AppError(
+        "You don't have permission to delete this comment",
+        403,
+      );
     }
 
     // Soft delete
@@ -242,15 +248,21 @@ class CommentService {
 
     // Prevent replies to replies (max 2 levels)
     if (parentComment.parentId) {
-      throw new AppError("Cannot reply to a reply. Please reply to the main comment.", 400);
+      throw new AppError(
+        "Cannot reply to a reply. Please reply to the main comment.",
+        400,
+      );
     }
 
-    const reply = await this.createComment({
-      commentableType: parentComment.commentableType,
-      commentableId: parentComment.commentableId,
-      parentId: commentId,
-      content,
-    }, userId);
+    const reply = await this.createComment(
+      {
+        commentableType: parentComment.commentableType,
+        commentableId: parentComment.commentableId,
+        parentId: commentId,
+        content,
+      },
+      userId,
+    );
 
     return reply;
   }

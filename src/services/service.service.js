@@ -18,7 +18,10 @@ class ServiceService {
     }
 
     if (shop.ownerId !== userId && shop.staff.length === 0) {
-      throw new AppError("You don't have permission to create services for this shop", 403);
+      throw new AppError(
+        "You don't have permission to create services for this shop",
+        403,
+      );
     }
 
     const service = await prisma.service.create({
@@ -93,7 +96,14 @@ class ServiceService {
   }
 
   async getAllServices(filters = {}) {
-    const { page = 1, limit = 20, search, isActive, minPrice, maxPrice } = filters;
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      isActive,
+      minPrice,
+      maxPrice,
+    } = filters;
     const skip = (page - 1) * limit;
 
     const where = {};
@@ -215,7 +225,10 @@ class ServiceService {
     }
 
     if (service.shop.ownerId !== userId && service.shop.staff.length === 0) {
-      throw new AppError("You don't have permission to update this service", 403);
+      throw new AppError(
+        "You don't have permission to update this service",
+        403,
+      );
     }
 
     const updatedService = await prisma.service.update({
@@ -263,7 +276,10 @@ class ServiceService {
     }
 
     if (service.shop.ownerId !== userId && service.shop.staff.length === 0) {
-      throw new AppError("You don't have permission to delete this service", 403);
+      throw new AppError(
+        "You don't have permission to delete this service",
+        403,
+      );
     }
 
     await prisma.service.delete({

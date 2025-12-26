@@ -7,14 +7,14 @@ import {
   adminDeleteComment,
   replyToComment,
 } from "../controllers/comment.controller.js";
-import { authenticate } from "../middlewares/auth.middleware.js";
+import { auth } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
 router.get("/:id", getCommentById);
 
 // Protected routes
-router.use(authenticate);
+router.use(auth);
 
 router.post("/", createComment);
 router.put("/:id", updateComment);

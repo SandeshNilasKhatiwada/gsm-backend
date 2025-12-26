@@ -171,7 +171,7 @@ class RoleService {
     if (userCount > 0) {
       throw new AppError(
         `Cannot delete role. ${userCount} users currently have this role`,
-        400
+        400,
       );
     }
 
@@ -204,9 +204,11 @@ class RoleService {
       },
     });
 
-    const existingPermissionIds = existingPermissions.map((rp) => rp.permissionId);
+    const existingPermissionIds = existingPermissions.map(
+      (rp) => rp.permissionId,
+    );
     const newPermissionIds = permissionIds.filter(
-      (id) => !existingPermissionIds.includes(id)
+      (id) => !existingPermissionIds.includes(id),
     );
 
     // Create new role-permission associations

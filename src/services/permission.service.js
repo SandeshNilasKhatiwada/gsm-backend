@@ -14,7 +14,7 @@ class PermissionService {
     if (existingPermission) {
       throw new AppError(
         "Permission with this resource and action already exists",
-        400
+        400,
       );
     }
 
@@ -115,7 +115,7 @@ class PermissionService {
       if (existingPermission) {
         throw new AppError(
           "Permission with this resource and action already exists",
-          400
+          400,
         );
       }
     }
@@ -143,7 +143,7 @@ class PermissionService {
     if (roleCount > 0) {
       throw new AppError(
         `Cannot delete permission. ${roleCount} roles currently use this permission`,
-        400
+        400,
       );
     }
 

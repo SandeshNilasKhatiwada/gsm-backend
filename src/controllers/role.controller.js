@@ -70,7 +70,7 @@ export const deleteRole = asyncHandler(async (req, res) => {
 export const addPermissionsToRole = asyncHandler(async (req, res) => {
   const role = await roleService.addPermissionsToRole(
     req.params.id,
-    req.body.permissionIds
+    req.body.permissionIds,
   );
 
   res.status(200).json({
@@ -86,7 +86,7 @@ export const addPermissionsToRole = asyncHandler(async (req, res) => {
 export const removePermissionFromRole = asyncHandler(async (req, res) => {
   const role = await roleService.removePermissionFromRole(
     req.params.id,
-    req.params.permissionId
+    req.params.permissionId,
   );
 
   res.status(200).json({

@@ -24,17 +24,17 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
     prisma.user.count(),
     prisma.user.count({ where: { isActive: true, deletedAt: null } }),
     prisma.user.count({ where: { isBlocked: true } }),
-    
+
     // Shop stats
     prisma.shop.count(),
     prisma.shop.count({ where: { verificationStatus: "verified" } }),
     prisma.shop.count({ where: { verificationStatus: "pending" } }),
     prisma.shop.count({ where: { isBlocked: true } }),
-    
+
     // Product stats
     prisma.product.count(),
     prisma.product.count({ where: { isActive: true } }),
-    
+
     // Order stats
     prisma.order.count(),
     prisma.order.count({ where: { status: "delivered" } }),
@@ -42,7 +42,7 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
       where: { status: "delivered" },
       _sum: { totalAmount: true },
     }),
-    
+
     // Recent activities
     prisma.activityLog.findMany({
       take: 10,

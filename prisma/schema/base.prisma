@@ -1,7 +1,2 @@
-generator client {
-    provider = "prisma-client-js"
-}
-
-datasource db {
-    provider = "postgresql"
-}
+// Common field patterns and base configurations
+// This file can contain shared field definitions if needed

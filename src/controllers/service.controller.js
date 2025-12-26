@@ -8,7 +8,7 @@ export const createService = asyncHandler(async (req, res) => {
   const service = await serviceService.createService(
     req.params.shopId,
     req.user.id,
-    req.body
+    req.body,
   );
 
   res.status(201).json({
@@ -24,7 +24,7 @@ export const createService = asyncHandler(async (req, res) => {
 export const getShopServices = asyncHandler(async (req, res) => {
   const result = await serviceService.getShopServices(
     req.params.shopId,
-    req.query
+    req.query,
   );
 
   res.status(200).json({
@@ -66,7 +66,7 @@ export const updateService = asyncHandler(async (req, res) => {
   const service = await serviceService.updateService(
     req.params.id,
     req.user.id,
-    req.body
+    req.body,
   );
 
   res.status(200).json({
@@ -95,7 +95,7 @@ export const addServiceReview = asyncHandler(async (req, res) => {
   const review = await serviceService.addReview(
     req.params.id,
     req.user.id,
-    req.body
+    req.body,
   );
 
   res.status(201).json({

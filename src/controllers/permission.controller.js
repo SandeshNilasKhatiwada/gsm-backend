@@ -45,7 +45,7 @@ export const getPermissionById = asyncHandler(async (req, res) => {
 export const updatePermission = asyncHandler(async (req, res) => {
   const permission = await permissionService.updatePermission(
     req.params.id,
-    req.body
+    req.body,
   );
 
   res.status(200).json({
