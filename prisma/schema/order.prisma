@@ -1,0 +1,53 @@
+// Order related enums
+enum OrderStatus {
+    pending
+    confirmed
+    shipped
+    delivered
+    cancelled
+}
+
+enum PaymentStatus {
+    pending
+    paid
+    failed
+    refunded
+}
+
+// Order Model
+model Order {
+    id              String        @id @default(uuid())
+    orderNumber     String        @unique @map("order_number")
+    userId          String        @map("user_id")
+    shopId          String        @map("shop_id")
+    totalAmount     Decimal       @map("total_amount") @db.Decimal(10, 2)
+    status          OrderStatus   @default(pending)
+    shippingAddress Json          @map("shipping_address")
+    paymentStatus   PaymentStatus @default(pending) @map("payment_status")
+    paymentMethod   String?       @map("payment_method")
+    notes           String?
+    createdAt       DateTime      @default(now()) @map("created_at")
+    updatedAt       DateTime      @updatedAt @map("updated_at")
+
+    user  User        @relation(fields: [userId], references: [id])
+    shop  Shop        @relation(fields: [shopId], references: [id])
+    items OrderItem[]
+
+    @@map("orders")
+}
+
+// OrderItem Model
+model OrderItem {
+    id         String   @id @default(uuid())
+    orderId    String   @map("order_id")
+    productId  String   @map("product_id")
+    quantity   Int
+    unitPrice  Decimal  @map("unit_price") @db.Decimal(10, 2)
+    totalPrice Decimal  @map("total_price") @db.Decimal(10, 2)
+    createdAt  DateTime @default(now()) @map("created_at")
+
+    order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+    product Product @relation(fields: [productId], references: [id])
+
+    @@map("order_items")
+}

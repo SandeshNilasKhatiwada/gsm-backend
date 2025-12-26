@@ -1,0 +1,12 @@
+// Enums for User, Role, and Permission models
+enum UserRoleStatus {
+    pending
+    approved
+    rejected
+}
+
+enum UserWarningSeverity {
+    low
+    medium
+    high
+}

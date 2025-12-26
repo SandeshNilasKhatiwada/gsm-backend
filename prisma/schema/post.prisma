@@ -1,0 +1,41 @@
+// Post related enums
+enum PostType {
+    blog
+    service
+    announcement
+}
+
+enum PostStatus {
+    draft
+    published
+    disabled
+}
+
+// Post Model
+model Post {
+    id                String     @id @default(uuid())
+    shopId            String     @map("shop_id")
+    authorId          String     @map("author_id")
+    title             String
+    slug              String     @unique
+    content           String?
+    excerpt           String?
+    featuredImageUrl  String?    @map("featured_image_url")
+    postType          PostType   @default(blog) @map("post_type")
+    status            PostStatus @default(draft)
+    isDisabledByAdmin Boolean    @default(false) @map("is_disabled_by_admin")
+    disabledReason    String?    @map("disabled_reason")
+    viewsCount        Int        @default(0) @map("views_count")
+    likesCount        Int        @default(0) @map("likes_count")
+    commentsCount     Int        @default(0) @map("comments_count")
+    publishedAt       DateTime?  @map("published_at")
+    deletedAt         DateTime?  @map("deleted_at")
+    createdAt         DateTime   @default(now()) @map("created_at")
+    updatedAt         DateTime   @updatedAt @map("updated_at")
+
+    shop     Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+    author   User      @relation(fields: [authorId], references: [id])
+    comments Comment[]
+
+    @@map("posts")
+}

@@ -1,0 +1,105 @@
+// Shop Model
+model Shop {
+    id                 String                 @id @default(uuid())
+    ownerId            String                 @map("owner_id")
+    name               String
+    slug               String                 @unique
+    description        String?
+    logoUrl            String?                @map("logo_url")
+    bannerUrl          String?                @map("banner_url")
+    email              String?
+    phone              String?
+    address            String?
+    documentationUrls  Json?                  @map("documentation_urls")
+    verificationStatus ShopVerificationStatus @default(pending) @map("verification_status")
+    isActive           Boolean                @default(true) @map("is_active")
+    isBlocked          Boolean                @default(false) @map("is_blocked")
+    blockedReason      String?                @map("blocked_reason")
+    strikeCount        Int                    @default(0) @map("strike_count")
+    rankingScore       Decimal                @default(0) @map("ranking_score") @db.Decimal(10, 2)
+    totalSales         Int                    @default(0) @map("total_sales")
+    verifiedAt         DateTime?              @map("verified_at")
+    verifiedBy         String?                @map("verified_by")
+    rejectionReason    String?                @map("rejection_reason")
+    deletedAt          DateTime?              @map("deleted_at")
+    createdAt          DateTime               @default(now()) @map("created_at")
+    updatedAt          DateTime               @updatedAt @map("updated_at")
+
+    owner         User           @relation("ShopOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+    verifier      User?          @relation("ShopVerifier", fields: [verifiedBy], references: [id])
+    staff         ShopStaff[]
+    products      Product[]
+    posts         Post[]
+    services      Service[]
+    followers     ShopFollower[]
+    orders        Order[]
+    rankingPoints RankingPoint[]
+    strikes       ShopStrike[]
+    reviews       Review[]
+
+    @@map("shops")
+}
+
+// ShopStaff Model
+model ShopStaff {
+    id          String        @id @default(uuid())
+    shopId      String        @map("shop_id")
+    userId      String        @map("user_id")
+    role        ShopStaffRole
+    permissions Json?
+    addedBy     String        @map("added_by")
+    removedAt   DateTime?     @map("removed_at")
+    createdAt   DateTime      @default(now()) @map("created_at")
+    updatedAt   DateTime      @updatedAt @map("updated_at")
+
+    shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([shopId, userId])
+    @@map("shop_staff")
+}
+
+// ShopFollower Model
+model ShopFollower {
+    id        String   @id @default(uuid())
+    shopId    String   @map("shop_id")
+    userId    String   @map("user_id")
+    createdAt DateTime @default(now()) @map("created_at")
+
+    shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([shopId, userId])
+    @@map("shop_followers")
+}
+
+// RankingPoint Model
+model RankingPoint {
+    id        String           @id @default(uuid())
+    shopId    String           @map("shop_id")
+    eventType RankingEventType @map("event_type")
+    points    Int
+    reason    String?
+    createdAt DateTime         @default(now()) @map("created_at")
+
+    shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+    @@map("ranking_points")
+}
+
+// ShopStrike Model
+model ShopStrike {
+    id          String         @id @default(uuid())
+    shopId      String         @map("shop_id")
+    issuedBy    String         @map("issued_by")
+    reason      String
+    severity    StrikeSeverity
+    actionTaken StrikeAction   @map("action_taken")
+    expiresAt   DateTime?      @map("expires_at")
+    createdAt   DateTime       @default(now()) @map("created_at")
+
+    shop   Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+    issuer User @relation(fields: [issuedBy], references: [id])
+
+    @@map("shop_strikes")
+}

@@ -1,0 +1,38 @@
+// Shop related enums
+enum ShopVerificationStatus {
+    pending
+    approved
+    rejected
+}
+
+enum ShopStaffRole {
+    manager
+    editor
+    viewer
+}
+
+enum RankingEventType {
+    shop_verified
+    documentation_complete
+    positive_review
+    sale_completed
+    penalty
+    first_product_added
+    first_sale
+    follower_gained
+    product_disabled
+    post_deleted
+}
+
+enum StrikeSeverity {
+    warning
+    minor
+    major
+    critical
+}
+
+enum StrikeAction {
+    warning
+    temporary_suspension
+    permanent_ban
+}

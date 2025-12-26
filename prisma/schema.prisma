@@ -1,0 +1,519 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    url      = env("DATABASE_URL")
+    provider = "postgresql"
+}
+
+// Enums
+enum UserRoleStatus {
+    pending
+    approved
+    rejected
+}
+
+enum ShopVerificationStatus {
+    pending
+    approved
+    rejected
+}
+
+enum ShopStaffRole {
+    manager
+    editor
+    viewer
+}
+
+enum PostType {
+    blog
+    service
+    announcement
+}
+
+enum PostStatus {
+    draft
+    published
+    disabled
+}
+
+enum ReviewableType {
+    product
+    service
+    shop
+}
+
+enum CommentableType {
+    post
+    product
+    service
+}
+
+enum OrderStatus {
+    pending
+    confirmed
+    shipped
+    delivered
+    cancelled
+}
+
+enum PaymentStatus {
+    pending
+    paid
+    failed
+    refunded
+}
+
+enum RankingEventType {
+    shop_verified
+    documentation_complete
+    positive_review
+    sale_completed
+    penalty
+    first_product_added
+    first_sale
+    follower_gained
+    product_disabled
+    post_deleted
+}
+
+enum StrikeSeverity {
+    warning
+    minor
+    major
+    critical
+}
+
+enum StrikeAction {
+    warning
+    temporary_suspension
+    permanent_ban
+}
+
+enum UserWarningSeverity {
+    low
+    medium
+    high
+}
+
+// User Model
+model User {
+    id                String    @id @default(uuid())
+    email             String    @unique
+    username          String    @unique
+    passwordHash      String    @map("password_hash")
+    firstName         String?   @map("first_name")
+    lastName          String?   @map("last_name")
+    phoneNumber       String?   @map("phone_number")
+    profilePictureUrl String?   @map("profile_picture_url")
+    isVerified        Boolean   @default(false) @map("is_verified")
+    isActive          Boolean   @default(true) @map("is_active")
+    isBlocked         Boolean   @default(false) @map("is_blocked")
+    blockedReason     String?   @map("blocked_reason")
+    warningCount      Int       @default(0) @map("warning_count")
+    lastWarningAt     DateTime? @map("last_warning_at")
+    emailVerifiedAt   DateTime? @map("email_verified_at")
+    deletedAt         DateTime? @map("deleted_at")
+    createdAt         DateTime  @default(now()) @map("created_at")
+    updatedAt         DateTime  @updatedAt @map("updated_at")
+
+    roles          UserRole[]
+    ownedShops     Shop[]         @relation("ShopOwner")
+    staffShops     ShopStaff[]
+    reviews        Review[]
+    comments       Comment[]
+    followedShops  ShopFollower[]
+    orders         Order[]
+    warnings       UserWarning[]  @relation("UserWarnings")
+    issuedWarnings UserWarning[]  @relation("IssuedWarnings")
+    activityLogs   ActivityLog[]
+    verifiedShops  Shop[]         @relation("ShopVerifier")
+    reviewedRoles  UserRole[]     @relation("RoleReviewer")
+    issuedStrikes  ShopStrike[]
+    posts          Post[]
+    products       Product[]
+    services       Service[]
+
+    @@map("users")
+}
+
+// Role Model
+model Role {
+    id           String    @id @default(uuid())
+    name         String    @unique
+    description  String?
+    isSystemRole Boolean   @default(false) @map("is_system_role")
+    createdAt    DateTime  @default(now()) @map("created_at")
+    updatedAt    DateTime  @updatedAt @map("updated_at")
+    deletedAt    DateTime? @map("deleted_at")
+
+    permissions RolePermission[]
+    users       UserRole[]
+
+    @@map("roles")
+}
+
+// Permission Model
+model Permission {
+    id          String    @id @default(uuid())
+    name        String    @unique
+    resource    String
+    action      String
+    description String?
+    createdAt   DateTime  @default(now()) @map("created_at")
+    updatedAt   DateTime  @updatedAt @map("updated_at")
+    deletedAt   DateTime? @map("deleted_at")
+
+    roles RolePermission[]
+
+    @@map("permissions")
+}
+
+// RolePermission Junction Table
+model RolePermission {
+    id           String   @id @default(uuid())
+    roleId       String   @map("role_id")
+    permissionId String   @map("permission_id")
+    createdAt    DateTime @default(now()) @map("created_at")
+
+    role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+    permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+    @@unique([roleId, permissionId])
+    @@map("role_permissions")
+}
+
+// UserRole Junction Table
+model UserRole {
+    id              String         @id @default(uuid())
+    userId          String         @map("user_id")
+    roleId          String         @map("role_id")
+    status          UserRoleStatus @default(pending)
+    requestedAt     DateTime       @default(now()) @map("requested_at")
+    reviewedAt      DateTime?      @map("reviewed_at")
+    reviewedBy      String?        @map("reviewed_by")
+    rejectionReason String?        @map("rejection_reason")
+    createdAt       DateTime       @default(now()) @map("created_at")
+    updatedAt       DateTime       @updatedAt @map("updated_at")
+
+    user     User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+    role     Role  @relation(fields: [roleId], references: [id], onDelete: Cascade)
+    reviewer User? @relation("RoleReviewer", fields: [reviewedBy], references: [id])
+
+    @@unique([userId, roleId])
+    @@map("user_roles")
+}
+
+// Shop Model
+model Shop {
+    id                 String                 @id @default(uuid())
+    ownerId            String                 @map("owner_id")
+    name               String
+    slug               String                 @unique
+    description        String?
+    logoUrl            String?                @map("logo_url")
+    bannerUrl          String?                @map("banner_url")
+    email              String?
+    phone              String?
+    address            String?
+    documentationUrls  Json?                  @map("documentation_urls")
+    verificationStatus ShopVerificationStatus @default(pending) @map("verification_status")
+    isActive           Boolean                @default(true) @map("is_active")
+    isBlocked          Boolean                @default(false) @map("is_blocked")
+    blockedReason      String?                @map("blocked_reason")
+    strikeCount        Int                    @default(0) @map("strike_count")
+    rankingScore       Decimal                @default(0) @map("ranking_score") @db.Decimal(10, 2)
+    totalSales         Int                    @default(0) @map("total_sales")
+    verifiedAt         DateTime?              @map("verified_at")
+    verifiedBy         String?                @map("verified_by")
+    rejectionReason    String?                @map("rejection_reason")
+    deletedAt          DateTime?              @map("deleted_at")
+    createdAt          DateTime               @default(now()) @map("created_at")
+    updatedAt          DateTime               @updatedAt @map("updated_at")
+
+    owner         User           @relation("ShopOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+    verifier      User?          @relation("ShopVerifier", fields: [verifiedBy], references: [id])
+    staff         ShopStaff[]
+    products      Product[]
+    posts         Post[]
+    services      Service[]
+    followers     ShopFollower[]
+    orders        Order[]
+    rankingPoints RankingPoint[]
+    strikes       ShopStrike[]
+    reviews       Review[]
+
+    @@map("shops")
+}
+
+// ShopStaff Model
+model ShopStaff {
+    id          String        @id @default(uuid())
+    shopId      String        @map("shop_id")
+    userId      String        @map("user_id")
+    role        ShopStaffRole
+    permissions Json?
+    addedBy     String        @map("added_by")
+    removedAt   DateTime?     @map("removed_at")
+    createdAt   DateTime      @default(now()) @map("created_at")
+    updatedAt   DateTime      @updatedAt @map("updated_at")
+
+    shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([shopId, userId])
+    @@map("shop_staff")
+}
+
+// ShopFollower Model
+model ShopFollower {
+    id        String   @id @default(uuid())
+    shopId    String   @map("shop_id")
+    userId    String   @map("user_id")
+    createdAt DateTime @default(now()) @map("created_at")
+
+    shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([shopId, userId])
+    @@map("shop_followers")
+}
+
+// RankingPoint Model
+model RankingPoint {
+    id        String           @id @default(uuid())
+    shopId    String           @map("shop_id")
+    eventType RankingEventType @map("event_type")
+    points    Int
+    reason    String?
+    createdAt DateTime         @default(now()) @map("created_at")
+
+    shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+    @@map("ranking_points")
+}
+
+// ShopStrike Model
+model ShopStrike {
+    id          String         @id @default(uuid())
+    shopId      String         @map("shop_id")
+    issuedBy    String         @map("issued_by")
+    reason      String
+    severity    StrikeSeverity
+    actionTaken StrikeAction   @map("action_taken")
+    expiresAt   DateTime?      @map("expires_at")
+    createdAt   DateTime       @default(now()) @map("created_at")
+
+    shop   Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+    issuer User @relation(fields: [issuedBy], references: [id])
+
+    @@map("shop_strikes")
+}
+
+// Product Model
+model Product {
+    id             String    @id @default(uuid())
+    shopId         String    @map("shop_id")
+    name           String
+    slug           String
+    description    String?
+    price          Decimal   @db.Decimal(10, 2)
+    compareAtPrice Decimal?  @map("compare_at_price") @db.Decimal(10, 2)
+    costPerItem    Decimal?  @map("cost_per_item") @db.Decimal(10, 2)
+    sku            String?
+    barcode        String?
+    quantity       Int       @default(0)
+    images         Json?
+    category       String?
+    tags           Json?
+    isActive       Boolean   @default(true) @map("is_active")
+    isFeatured     Boolean   @default(false) @map("is_featured")
+    averageRating  Decimal   @default(0) @map("average_rating") @db.Decimal(3, 2)
+    totalReviews   Int       @default(0) @map("total_reviews")
+    totalSales     Int       @default(0) @map("total_sales")
+    createdBy      String    @map("created_by")
+    deletedAt      DateTime? @map("deleted_at")
+    createdAt      DateTime  @default(now()) @map("created_at")
+    updatedAt      DateTime  @updatedAt @map("updated_at")
+
+    shop       Shop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
+    creator    User        @relation(fields: [createdBy], references: [id])
+    reviews    Review[]
+    comments   Comment[]
+    orderItems OrderItem[]
+
+    @@map("products")
+}
+
+// Service Model
+model Service {
+    id            String    @id @default(uuid())
+    shopId        String    @map("shop_id")
+    name          String
+    description   String?
+    price         Decimal   @db.Decimal(10, 2)
+    duration      Int?
+    images        Json?
+    isActive      Boolean   @default(true) @map("is_active")
+    averageRating Decimal   @default(0) @map("average_rating") @db.Decimal(3, 2)
+    totalReviews  Int       @default(0) @map("total_reviews")
+    createdBy     String    @map("created_by")
+    deletedAt     DateTime? @map("deleted_at")
+    createdAt     DateTime  @default(now()) @map("created_at")
+    updatedAt     DateTime  @updatedAt @map("updated_at")
+
+    shop     Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+    creator  User      @relation(fields: [createdBy], references: [id])
+    reviews  Review[]
+    comments Comment[]
+
+    @@map("services")
+}
+
+// Post Model
+model Post {
+    id                String     @id @default(uuid())
+    shopId            String     @map("shop_id")
+    authorId          String     @map("author_id")
+    title             String
+    slug              String     @unique
+    content           String?
+    excerpt           String?
+    featuredImageUrl  String?    @map("featured_image_url")
+    postType          PostType   @default(blog) @map("post_type")
+    status            PostStatus @default(draft)
+    isDisabledByAdmin Boolean    @default(false) @map("is_disabled_by_admin")
+    disabledReason    String?    @map("disabled_reason")
+    viewsCount        Int        @default(0) @map("views_count")
+    likesCount        Int        @default(0) @map("likes_count")
+    commentsCount     Int        @default(0) @map("comments_count")
+    publishedAt       DateTime?  @map("published_at")
+    deletedAt         DateTime?  @map("deleted_at")
+    createdAt         DateTime   @default(now()) @map("created_at")
+    updatedAt         DateTime   @updatedAt @map("updated_at")
+
+    shop     Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+    author   User      @relation(fields: [authorId], references: [id])
+    comments Comment[]
+
+    @@map("posts")
+}
+
+// Review Model
+model Review {
+    id                 String         @id @default(uuid())
+    userId             String         @map("user_id")
+    reviewableType     ReviewableType @map("reviewable_type")
+    reviewableId       String         @map("reviewable_id")
+    rating             Int
+    title              String?
+    comment            String?
+    images             Json?
+    isVerifiedPurchase Boolean        @default(false) @map("is_verified_purchase")
+    helpfulCount       Int            @default(0) @map("helpful_count")
+    deletedAt          DateTime?      @map("deleted_at")
+    createdAt          DateTime       @default(now()) @map("created_at")
+    updatedAt          DateTime       @updatedAt @map("updated_at")
+
+    user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    product Product? @relation(fields: [reviewableId], references: [id], map: "review_product_fk")
+    service Service? @relation(fields: [reviewableId], references: [id], map: "review_service_fk")
+    shop    Shop?    @relation(fields: [reviewableId], references: [id], map: "review_shop_fk")
+
+    @@map("reviews")
+}
+
+// Comment Model
+model Comment {
+    id               String          @id @default(uuid())
+    userId           String          @map("user_id")
+    commentableType  CommentableType @map("commentable_type")
+    commentableId    String          @map("commentable_id")
+    parentCommentId  String?         @map("parent_comment_id")
+    content          String
+    isEdited         Boolean         @default(false) @map("is_edited")
+    isDeletedByAdmin Boolean         @default(false) @map("is_deleted_by_admin")
+    deletedReason    String?         @map("deleted_reason")
+    deletedAt        DateTime?       @map("deleted_at")
+    createdAt        DateTime        @default(now()) @map("created_at")
+    updatedAt        DateTime        @updatedAt @map("updated_at")
+
+    user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+    post          Post?     @relation(fields: [commentableId], references: [id], map: "comment_post_fk")
+    product       Product?  @relation(fields: [commentableId], references: [id], map: "comment_product_fk")
+    service       Service?  @relation(fields: [commentableId], references: [id], map: "comment_service_fk")
+    parentComment Comment?  @relation("CommentReplies", fields: [parentCommentId], references: [id])
+    replies       Comment[] @relation("CommentReplies")
+
+    @@map("comments")
+}
+
+// Order Model
+model Order {
+    id              String        @id @default(uuid())
+    orderNumber     String        @unique @map("order_number")
+    userId          String        @map("user_id")
+    shopId          String        @map("shop_id")
+    totalAmount     Decimal       @map("total_amount") @db.Decimal(10, 2)
+    status          OrderStatus   @default(pending)
+    shippingAddress Json          @map("shipping_address")
+    paymentStatus   PaymentStatus @default(pending) @map("payment_status")
+    paymentMethod   String?       @map("payment_method")
+    notes           String?
+    createdAt       DateTime      @default(now()) @map("created_at")
+    updatedAt       DateTime      @updatedAt @map("updated_at")
+
+    user  User        @relation(fields: [userId], references: [id])
+    shop  Shop        @relation(fields: [shopId], references: [id])
+    items OrderItem[]
+
+    @@map("orders")
+}
+
+// OrderItem Model
+model OrderItem {
+    id         String   @id @default(uuid())
+    orderId    String   @map("order_id")
+    productId  String   @map("product_id")
+    quantity   Int
+    unitPrice  Decimal  @map("unit_price") @db.Decimal(10, 2)
+    totalPrice Decimal  @map("total_price") @db.Decimal(10, 2)
+    createdAt  DateTime @default(now()) @map("created_at")
+
+    order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+    product Product @relation(fields: [productId], references: [id])
+
+    @@map("order_items")
+}
+
+// UserWarning Model
+model UserWarning {
+    id        String              @id @default(uuid())
+    userId    String              @map("user_id")
+    issuedBy  String              @map("issued_by")
+    reason    String
+    severity  UserWarningSeverity
+    createdAt DateTime            @default(now()) @map("created_at")
+
+    user   User @relation("UserWarnings", fields: [userId], references: [id], onDelete: Cascade)
+    issuer User @relation("IssuedWarnings", fields: [issuedBy], references: [id])
+
+    @@map("user_warnings")
+}
+
+// ActivityLog Model
+model ActivityLog {
+    id         String   @id @default(uuid())
+    userId     String   @map("user_id")
+    action     String
+    entityType String   @map("entity_type")
+    entityId   String   @map("entity_id")
+    metadata   Json?
+    ipAddress  String?  @map("ip_address")
+    createdAt  DateTime @default(now()) @map("created_at")
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@map("activity_logs")
+}
