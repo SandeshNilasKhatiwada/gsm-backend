@@ -159,7 +159,7 @@ class ProductService {
               name: true,
               slug: true,
               logoUrl: true,
-              isVerified: true,
+              verificationStatus: true,
             },
           },
           _count: {
@@ -187,7 +187,7 @@ class ProductService {
             name: true,
             slug: true,
             logoUrl: true,
-            isVerified: true,
+            verificationStatus: true,
           },
         },
         reviews: {
