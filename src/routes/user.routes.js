@@ -33,11 +33,7 @@ router.get(
   getAllUsers,
 );
 router.get("/:id", validate(getUserByIdSchema, "params"), getUserById);
-router.put(
-  "/:id",
-  validate(updateUserSchema),
-  updateUser,
-);
+router.put("/:id", validate(updateUserSchema), updateUser);
 router.post(
   "/:id/block",
   requireRole("admin"),

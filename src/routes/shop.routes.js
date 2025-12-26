@@ -15,6 +15,10 @@ import {
   deleteShop,
 } from "../controllers/shop.controller.js";
 import {
+  createService,
+  getShopServices,
+} from "../controllers/service.controller.js";
+import {
   auth,
   requireRole,
   optionalAuth,
@@ -75,5 +79,9 @@ router.delete("/:shopId/staff/:staffId", removeStaff);
 // Follow/Unfollow
 router.post("/:id/follow", followShop);
 router.delete("/:id/follow", unfollowShop);
+
+// Services
+router.post("/:shopId/services", auth, createService);
+router.get("/:shopId/services", getShopServices);
 
 export default router;

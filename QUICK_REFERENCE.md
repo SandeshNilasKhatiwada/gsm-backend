@@ -7,11 +7,13 @@ All services now use **custom AppError class** instead of plain Error objects, e
 ## 🔧 How to Use AppError
 
 ### Import
+
 ```javascript
 import { AppError } from "../utils/error.util.js";
 ```
 
 ### Usage
+
 ```javascript
 // ❌ BEFORE (always returned 500)
 throw new Error("User not found");
@@ -23,9 +25,11 @@ throw new AppError("User not found", 404);
 ## 📋 Status Code Guide
 
 ### 400 - Bad Request
+
 Use for: **Client-side validation errors, business rule violations**
 
 Examples:
+
 ```javascript
 throw new AppError("Email or username already exists", 400);
 throw new AppError("Insufficient stock for ${product.name}", 400);
@@ -34,9 +38,11 @@ throw new AppError("Can only cancel pending orders", 400);
 ```
 
 ### 401 - Unauthorized
+
 Use for: **Authentication failures, invalid credentials**
 
 Examples:
+
 ```javascript
 throw new AppError("Invalid credentials", 401);
 throw new AppError("Current password is incorrect", 401);
@@ -44,9 +50,11 @@ throw new AppError("Invalid or expired token", 401);
 ```
 
 ### 403 - Forbidden
+
 Use for: **Authorization failures, insufficient permissions**
 
 Examples:
+
 ```javascript
 throw new AppError("Account is inactive", 403);
 throw new AppError("Account is blocked: ${reason}", 403);
@@ -55,9 +63,11 @@ throw new AppError("Not authorized to delete this product", 403);
 ```
 
 ### 404 - Not Found
+
 Use for: **Missing resources**
 
 Examples:
+
 ```javascript
 throw new AppError("User not found", 404);
 throw new AppError("Shop not found", 404);
@@ -67,6 +77,7 @@ throw new AppError("Order not found", 404);
 ```
 
 ### 500 - Internal Server Error
+
 Use for: **Unexpected errors (default)**
 
 ```javascript
@@ -77,6 +88,7 @@ throw new AppError("An unexpected error occurred");
 ## 🎯 Common Patterns
 
 ### Resource Not Found
+
 ```javascript
 const user = await prisma.user.findUnique({ where: { id } });
 if (!user) {
@@ -85,6 +97,7 @@ if (!user) {
 ```
 
 ### Authorization Check
+
 ```javascript
 if (shop.ownerId !== userId) {
   throw new AppError("Not authorized to update this shop", 403);
@@ -92,6 +105,7 @@ if (shop.ownerId !== userId) {
 ```
 
 ### Validation Error
+
 ```javascript
 if (product.quantity < requestedQuantity) {
   throw new AppError(`Insufficient stock for ${product.name}`, 400);
@@ -99,6 +113,7 @@ if (product.quantity < requestedQuantity) {
 ```
 
 ### Duplicate Entry
+
 ```javascript
 if (existingUser) {
   throw new AppError("Email or username already exists", 400);
@@ -106,6 +121,7 @@ if (existingUser) {
 ```
 
 ### Invalid Credentials
+
 ```javascript
 const isValid = await bcrypt.compare(password, user.passwordHash);
 if (!isValid) {
@@ -116,6 +132,7 @@ if (!isValid) {
 ## 📊 Updated Services
 
 All 6 services now use AppError:
+
 - ✅ `src/services/auth.service.js` (6 errors)
 - ✅ `src/services/user.service.js` (1 error)
 - ✅ `src/services/shop.service.js` (6 errors)
@@ -128,16 +145,19 @@ All 6 services now use AppError:
 ## 🧪 Testing
 
 ### Run All Tests
+
 ```bash
 npm test
 ```
 
 ### Run Specific Suite
+
 ```bash
 npm test -- tests/auth.test.js
 ```
 
 ### Expected Results
+
 - Auth: 10-11/11 passing (was 6/11)
 - Total: 35-45/59 passing (was 25/59)
 - All errors return correct status codes

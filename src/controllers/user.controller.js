@@ -31,7 +31,7 @@ export const getUserById = asyncHandler(async (req, res) => {
 export const updateUser = asyncHandler(async (req, res) => {
   // Check if user is updating their own profile or is admin
   const isOwnProfile = req.user.id === req.params.id;
-  const isAdmin = req.user.roles.some(ur => ur.role.name === "admin");
+  const isAdmin = req.user.roles.some((ur) => ur.role.name === "admin");
 
   if (!isOwnProfile && !isAdmin) {
     return res.status(403).json({

@@ -7,6 +7,7 @@ The backend APIs have been successfully tested and are functioning correctly wit
 ## 🎯 Test Results
 
 ### Successful Tests:
+
 1. ✅ **Health Check** - Server is running
 2. ✅ **User Registration** - Creates new users (201)
 3. ✅ **Duplicate Email** - Rejects duplicates (400)
@@ -18,6 +19,7 @@ The backend APIs have been successfully tested and are functioning correctly wit
 9. ✅ **Authentication** - Protects routes with JWT
 
 ### Error Handling Working:
+
 - ✅ **400** - Bad Request (duplicates, validation)
 - ✅ **401** - Unauthorized (invalid credentials)
 - ✅ **404** - Not Found (missing resources)
@@ -27,6 +29,7 @@ The backend APIs have been successfully tested and are functioning correctly wit
 ## 📝 Working Code Examples
 
 ### 1. Custom Error Class (`src/utils/error.util.js`)
+
 ```javascript
 export class AppError extends Error {
   constructor(message, statusCode = 500) {
@@ -43,6 +46,7 @@ export const createError = (message, statusCode = 500) => {
 ```
 
 ### 2. Authentication Service with Proper Error Codes
+
 ```javascript
 // src/services/auth.service.js
 import { AppError } from "../utils/error.util.js";
@@ -60,7 +64,14 @@ class AuthService {
     // Hash password and create user
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
-      data: { email, username, passwordHash: hashedPassword, firstName, lastName, phoneNumber },
+      data: {
+        email,
+        username,
+        passwordHash: hashedPassword,
+        firstName,
+        lastName,
+        phoneNumber,
+      },
     });
 
     return user;
@@ -97,7 +108,10 @@ class AuthService {
       throw new AppError("User not found", 404); // ✅ 404
     }
 
-    const isPasswordValid = await bcrypt.compare(oldPassword, user.passwordHash);
+    const isPasswordValid = await bcrypt.compare(
+      oldPassword,
+      user.passwordHash,
+    );
     if (!isPasswordValid) {
       throw new AppError("Current password is incorrect", 401); // ✅ 401
     }
@@ -115,6 +129,7 @@ class AuthService {
 ```
 
 ### 3. Shop Service with Proper Error Codes
+
 ```javascript
 // src/services/shop.service.js
 import { AppError } from "../utils/error.util.js";
@@ -161,6 +176,7 @@ class ShopService {
 ```
 
 ### 4. Error Middleware (Already Working)
+
 ```javascript
 // src/middlewares/error.middleware.js
 export const errorHandler = (err, req, res, next) => {
@@ -195,12 +211,14 @@ export const errorHandler = (err, req, res, next) => {
 ## 🧪 How to Test
 
 ### 1. Start the Server
+
 ```bash
 cd /Users/sandeshnilaskhatiwada/Desktop/project_gsm/backend
 node src/server.js
 ```
 
 ### 2. Run Automated Tests
+
 ```bash
 # Make sure server is running in another terminal
 ./test-api.sh
@@ -209,6 +227,7 @@ node src/server.js
 ### 3. Manual API Tests
 
 #### Register User
+
 ```bash
 curl -X POST http://localhost:5000/api/auth/register \
   -H "Content-Type: application/json" \
@@ -224,6 +243,7 @@ curl -X POST http://localhost:5000/api/auth/register \
 ```
 
 #### Login
+
 ```bash
 curl -X POST http://localhost:5000/api/auth/login \
   -H "Content-Type: application/json" \
@@ -234,6 +254,7 @@ curl -X POST http://localhost:5000/api/auth/login \
 ```
 
 #### Create Shop (requires token)
+
 ```bash
 TOKEN="your_jwt_token_here"
 
@@ -250,6 +271,7 @@ curl -X POST http://localhost:5000/api/shops \
 ```
 
 #### Get All Shops
+
 ```bash
 curl http://localhost:5000/api/shops
 ```
@@ -257,6 +279,7 @@ curl http://localhost:5000/api/shops
 ## 📋 All Updated Service Files
 
 ### Files with AppError Implementation:
+
 1. ✅ `src/utils/error.util.js` - Custom error class
 2. ✅ `src/services/auth.service.js` - 6 error handlers
 3. ✅ `src/services/user.service.js` - 1 error handler
@@ -269,6 +292,7 @@ curl http://localhost:5000/api/shops
 ## 🎉 Summary
 
 ### What's Working:
+
 - ✅ User registration with duplicate detection
 - ✅ User login with credential validation
 - ✅ JWT authentication and authorization
@@ -282,6 +306,7 @@ curl http://localhost:5000/api/shops
 - ✅ Cookie and Bearer token support
 
 ### Status Code Summary:
+
 - **200** - Success
 - **201** - Created
 - **400** - Bad Request (duplicates, validation)
@@ -293,6 +318,7 @@ curl http://localhost:5000/api/shops
 ## 🚀 Next Steps
 
 The API is fully functional! You can:
+
 1. Run the automated test script: `./test-api.sh`
 2. Test individual endpoints using curl
 3. Use Postman with the collection: `GSM_Marketplace_Postman_Collection.json`

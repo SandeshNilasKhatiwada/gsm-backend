@@ -33,6 +33,11 @@ app.get("/", (req, res) => {
       products: "/api/products",
       posts: "/api/posts",
       orders: "/api/orders",
+      roles: "/api/roles",
+      permissions: "/api/permissions",
+      services: "/api/services",
+      comments: "/api/comments",
+      admin: "/api/admin",
       health: "/api/health",
     },
   });

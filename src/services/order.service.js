@@ -219,7 +219,7 @@ class OrderService {
               id: true,
               username: true,
               firstName: true,
-            lastName: true,
+              lastName: true,
               email: true,
             },
           },
