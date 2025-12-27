@@ -23,6 +23,11 @@ class AuthService {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Get customer role
+    const customerRole = await prisma.role.findFirst({
+      where: { name: "customer" },
+    });
+
     // Create user
     const user = await prisma.user.create({
       data: {
@@ -32,25 +37,46 @@ class AuthService {
         firstName,
         lastName,
         phoneNumber,
+        roles: {
+          create: {
+            roleId: customerRole.id,
+            status: "approved",
+          },
+        },
       },
-      select: {
-        id: true,
-        email: true,
-        username: true,
-        firstName: true,
-        lastName: true,
-        phoneNumber: true,
-        isVerified: true,
-        isActive: true,
-        createdAt: true,
+      include: {
+        roles: {
+          include: {
+            role: {
+              include: {
+                permissions: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
+
+    // Remove password from response
+    const { passwordHash: _, ...userWithoutPassword } = user;
+
+    // Format user response with primary role
+    const primaryRole = user.roles && user.roles.length > 0 ? user.roles[0].role : null;
+    const formattedUser = {
+      ...userWithoutPassword,
+      role: primaryRole,
+      roles: user.roles?.map(ur => ur.role) || [],
+    };
 
     // Generate tokens
     const token = generateToken(user.id);
     const refreshToken = generateRefreshToken(user.id);
 
-    return { user, token, refreshToken };
+    return { user: formattedUser, token, refreshToken };
   }
 
   // Login user
@@ -98,11 +124,19 @@ class AuthService {
     // Remove password from response
     const { passwordHash: _, ...userWithoutPassword } = user;
 
+    // Format user response with primary role
+    const primaryRole = user.roles && user.roles.length > 0 ? user.roles[0].role : null;
+    const formattedUser = {
+      ...userWithoutPassword,
+      role: primaryRole,
+      roles: user.roles?.map(ur => ur.role) || [],
+    };
+
     // Generate tokens
     const token = generateToken(user.id);
     const refreshToken = generateRefreshToken(user.id);
 
-    return { user: userWithoutPassword, token, refreshToken };
+    return { user: formattedUser, token, refreshToken };
   }
 
   // Get profile

@@ -15,8 +15,9 @@ async function main() {
       update: {},
       create: {
         name: "user.read",
+        resource: "user",
+        action: "read",
         description: "Read user information",
-        category: "user",
       },
     }),
     prisma.permission.upsert({
@@ -24,8 +25,9 @@ async function main() {
       update: {},
       create: {
         name: "user.write",
+        resource: "user",
+        action: "write",
         description: "Create and update users",
-        category: "user",
       },
     }),
     prisma.permission.upsert({
@@ -33,8 +35,9 @@ async function main() {
       update: {},
       create: {
         name: "user.delete",
+        resource: "user",
+        action: "delete",
         description: "Delete users",
-        category: "user",
       },
     }),
     // Shop permissions
@@ -43,8 +46,9 @@ async function main() {
       update: {},
       create: {
         name: "shop.read",
+        resource: "shop",
+        action: "read",
         description: "Read shop information",
-        category: "shop",
       },
     }),
     prisma.permission.upsert({
@@ -52,8 +56,9 @@ async function main() {
       update: {},
       create: {
         name: "shop.write",
+        resource: "shop",
+        action: "write",
         description: "Create and update shops",
-        category: "shop",
       },
     }),
     prisma.permission.upsert({
@@ -61,8 +66,9 @@ async function main() {
       update: {},
       create: {
         name: "shop.delete",
+        resource: "shop",
+        action: "delete",
         description: "Delete shops",
-        category: "shop",
       },
     }),
     // Product permissions
@@ -71,8 +77,9 @@ async function main() {
       update: {},
       create: {
         name: "product.read",
+        resource: "product",
+        action: "read",
         description: "Read product information",
-        category: "product",
       },
     }),
     prisma.permission.upsert({
@@ -80,8 +87,9 @@ async function main() {
       update: {},
       create: {
         name: "product.write",
+        resource: "product",
+        action: "write",
         description: "Create and update products",
-        category: "product",
       },
     }),
     prisma.permission.upsert({
@@ -89,8 +97,9 @@ async function main() {
       update: {},
       create: {
         name: "product.delete",
+        resource: "product",
+        action: "delete",
         description: "Delete products",
-        category: "product",
       },
     }),
     // Order permissions
@@ -99,8 +108,9 @@ async function main() {
       update: {},
       create: {
         name: "order.read",
+        resource: "order",
+        action: "read",
         description: "Read order information",
-        category: "order",
       },
     }),
     prisma.permission.upsert({
@@ -108,8 +118,9 @@ async function main() {
       update: {},
       create: {
         name: "order.write",
+        resource: "order",
+        action: "write",
         description: "Create and update orders",
-        category: "order",
       },
     }),
     // Admin permissions
@@ -118,8 +129,9 @@ async function main() {
       update: {},
       create: {
         name: "admin.all",
+        resource: "admin",
+        action: "all",
         description: "Full administrative access",
-        category: "admin",
       },
     }),
   ]);
@@ -187,12 +199,13 @@ async function main() {
     create: {
       email: "admin@gsm.com",
       username: "admin",
-      password: hashedPassword,
-      fullName: "System Administrator",
+      passwordHash: hashedPassword,
+      firstName: "System",
+      lastName: "Administrator",
       phoneNumber: "1234567890",
       isVerified: true,
       isActive: true,
-      verifiedAt: new Date(),
+      emailVerifiedAt: new Date(),
     },
   });
 

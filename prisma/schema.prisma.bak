@@ -1,0 +1,12 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+// Import all models
+// Note: This file serves as the main entry point for the schema
+// All model files should be in the same directory
