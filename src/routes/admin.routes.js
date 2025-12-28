@@ -2,6 +2,8 @@ import express from "express";
 import {
   getDashboardStats,
   getUsers,
+  verifyUser,
+  blockUser,
   getShops,
   getPendingShops,
   getActivityLogs,
@@ -17,6 +19,8 @@ router.use(auth);
 
 router.get("/dashboard", getDashboardStats);
 router.get("/users", getUsers);
+router.put("/users/:id/verify", verifyUser);
+router.put("/users/:id/block", blockUser);
 router.get("/shops", getShops);
 router.get("/shops/pending", getPendingShops);
 router.get("/activity-logs", getActivityLogs);

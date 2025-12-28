@@ -14,6 +14,7 @@ export const registerSchema = z.object({
       firstName: z.string().min(1).max(50).optional(),
       lastName: z.string().min(1).max(50).optional(),
       phoneNumber: z.string().optional(),
+      userType: z.enum(["customer", "shop_owner"]).optional(),
     })
     .refine((data) => data.password === data.confirmPassword, {
       message: "Passwords do not match",

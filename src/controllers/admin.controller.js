@@ -170,11 +170,61 @@ export const getUsers = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Verify user
+// @route   PUT /api/admin/users/:id/verify
+// @access  Private/Admin
+export const verifyUser = asyncHandler(async (req, res) => {
+  const user = await prisma.user.update({
+    where: { id: req.params.id },
+    data: {
+      isVerified: true,
+      emailVerifiedAt: new Date(),
+    },
+    include: {
+      roles: {
+        include: {
+          role: true,
+        },
+      },
+    },
+  });
+
+  res.json({
+    success: true,
+    message: "User verified successfully",
+    data: user,
+  });
+});
+
+// @desc    Block user
+// @route   PUT /api/admin/users/:id/block
+// @access  Private/Admin
+export const blockUser = asyncHandler(async (req, res) => {
+  const user = await prisma.user.update({
+    where: { id: req.params.id },
+    data: {
+      isBlocked: true,
+    },
+  });
+
+  res.json({
+    success: true,
+    message: "User blocked successfully",
+    data: user,
+  });
+});
+
 // @desc    Get all shops (admin)
 // @route   GET /api/admin/shops
 // @access  Private/Admin
 export const getShops = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 20, search, verificationStatus, isBlocked } = req.query;
+  const {
+    page = 1,
+    limit = 20,
+    search,
+    verificationStatus,
+    isBlocked,
+  } = req.query;
   const skip = (page - 1) * limit;
 
   const where = {};

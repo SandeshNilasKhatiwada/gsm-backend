@@ -6,7 +6,7 @@ import { AppError } from "../utils/error.util.js";
 class AuthService {
   // Register new user
   async register(userData) {
-    const { email, username, password, firstName, lastName, phoneNumber } =
+    const { email, username, password, firstName, lastName, phoneNumber, userType } =
       userData;
 
     // Check if email already exists
@@ -23,10 +23,15 @@ class AuthService {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Get customer role
-    const customerRole = await prisma.role.findFirst({
-      where: { name: "customer" },
+    // Get role based on userType (default to customer)
+    const roleName = userType === "shop_owner" ? "shop_owner" : "customer";
+    const role = await prisma.role.findFirst({
+      where: { name: roleName },
     });
+
+    if (!role) {
+      throw new AppError("Role not found", 500);
+    }
 
     // Create user
     const user = await prisma.user.create({
@@ -39,7 +44,7 @@ class AuthService {
         phoneNumber,
         roles: {
           create: {
-            roleId: customerRole.id,
+            roleId: role.id,
             status: "approved",
           },
         },
