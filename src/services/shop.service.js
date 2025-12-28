@@ -201,8 +201,9 @@ class ShopService {
     const shop = await prisma.shop.update({
       where: { id: shopId },
       data: {
-        isVerified: true,
+        verificationStatus: "VERIFIED",
         verifiedAt: new Date(),
+        verifiedBy: verifiedBy,
       },
     });
 
@@ -213,6 +214,30 @@ class ShopService {
         action: "VERIFY_SHOP",
         targetType: "Shop",
         targetId: shopId,
+      },
+    });
+
+    return shop;
+  }
+
+  // Reject shop
+  async rejectShop(shopId, reason, rejectedBy) {
+    const shop = await prisma.shop.update({
+      where: { id: shopId },
+      data: {
+        verificationStatus: "REJECTED",
+        rejectionReason: reason || "Shop verification rejected",
+      },
+    });
+
+    // Log activity
+    await prisma.activityLog.create({
+      data: {
+        userId: rejectedBy,
+        action: "REJECT_SHOP",
+        targetType: "Shop",
+        targetId: shopId,
+        details: { reason },
       },
     });
 

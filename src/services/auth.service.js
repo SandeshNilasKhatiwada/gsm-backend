@@ -65,11 +65,12 @@ class AuthService {
     const { passwordHash: _, ...userWithoutPassword } = user;
 
     // Format user response with primary role
-    const primaryRole = user.roles && user.roles.length > 0 ? user.roles[0].role : null;
+    const primaryRole =
+      user.roles && user.roles.length > 0 ? user.roles[0].role : null;
     const formattedUser = {
       ...userWithoutPassword,
       role: primaryRole,
-      roles: user.roles?.map(ur => ur.role) || [],
+      roles: user.roles?.map((ur) => ur.role) || [],
     };
 
     // Generate tokens
@@ -125,11 +126,12 @@ class AuthService {
     const { passwordHash: _, ...userWithoutPassword } = user;
 
     // Format user response with primary role
-    const primaryRole = user.roles && user.roles.length > 0 ? user.roles[0].role : null;
+    const primaryRole =
+      user.roles && user.roles.length > 0 ? user.roles[0].role : null;
     const formattedUser = {
       ...userWithoutPassword,
       role: primaryRole,
-      roles: user.roles?.map(ur => ur.role) || [],
+      roles: user.roles?.map((ur) => ur.role) || [],
     };
 
     // Generate tokens

@@ -68,6 +68,20 @@ export const verifyShop = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Reject shop verification
+// @route   PUT /api/shops/:id/reject
+// @access  Private/Admin
+export const rejectShop = asyncHandler(async (req, res) => {
+  const { reason } = req.body;
+  const shop = await shopService.rejectShop(req.params.id, reason, req.user.id);
+
+  res.json({
+    success: true,
+    message: "Shop verification rejected",
+    data: shop,
+  });
+});
+
 // @desc    Block shop
 // @route   PUT /api/shops/:id/block
 // @access  Private/Admin

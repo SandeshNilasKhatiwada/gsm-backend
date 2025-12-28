@@ -2,6 +2,7 @@ import express from "express";
 import {
   getDashboardStats,
   getUsers,
+  getShops,
   getPendingShops,
   getActivityLogs,
   moderateContent,
@@ -16,6 +17,7 @@ router.use(auth);
 
 router.get("/dashboard", getDashboardStats);
 router.get("/users", getUsers);
+router.get("/shops", getShops);
 router.get("/shops/pending", getPendingShops);
 router.get("/activity-logs", getActivityLogs);
 router.post("/moderate", moderateContent);

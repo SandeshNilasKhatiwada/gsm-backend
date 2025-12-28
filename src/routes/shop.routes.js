@@ -5,6 +5,7 @@ import {
   getAllShops,
   getShopById,
   verifyShop,
+  rejectShop,
   blockShop,
   unblockShop,
   issueStrike,
@@ -57,6 +58,12 @@ router.put(
   requireRole("admin"),
   validate(verifyShopSchema, "params"),
   verifyShop,
+);
+router.put(
+  "/:id/reject",
+  requireRole("admin"),
+  validate(verifyShopSchema, "params"),
+  rejectShop,
 );
 router.put(
   "/:id/block",

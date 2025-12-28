@@ -23,9 +23,9 @@ enum UserWarningSeverity {
 }
 // Shop related enums
 enum ShopVerificationStatus {
-    pending
-    approved
-    rejected
+    PENDING
+    VERIFIED
+    REJECTED
 }
 
 enum ShopStaffRole {
@@ -210,7 +210,7 @@ model Shop {
     phone              String?
     address            String?
     documentationUrls  Json?                  @map("documentation_urls")
-    verificationStatus ShopVerificationStatus @default(pending) @map("verification_status")
+    verificationStatus ShopVerificationStatus @default(PENDING) @map("verification_status")
     isActive           Boolean                @default(true) @map("is_active")
     isBlocked          Boolean                @default(false) @map("is_blocked")
     blockedReason      String?                @map("blocked_reason")

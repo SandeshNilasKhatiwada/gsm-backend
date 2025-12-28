@@ -27,8 +27,8 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
 
     // Shop stats
     prisma.shop.count(),
-    prisma.shop.count({ where: { verificationStatus: "verified" } }),
-    prisma.shop.count({ where: { verificationStatus: "pending" } }),
+    prisma.shop.count({ where: { verificationStatus: "VERIFIED" } }),
+    prisma.shop.count({ where: { verificationStatus: "PENDING" } }),
     prisma.shop.count({ where: { isBlocked: true } }),
 
     // Product stats
@@ -170,6 +170,70 @@ export const getUsers = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Get all shops (admin)
+// @route   GET /api/admin/shops
+// @access  Private/Admin
+export const getShops = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 20, search, verificationStatus, isBlocked } = req.query;
+  const skip = (page - 1) * limit;
+
+  const where = {};
+
+  if (search) {
+    where.OR = [
+      { name: { contains: search, mode: "insensitive" } },
+      { description: { contains: search, mode: "insensitive" } },
+    ];
+  }
+
+  if (verificationStatus) {
+    where.verificationStatus = verificationStatus.toUpperCase();
+  }
+
+  if (isBlocked !== undefined) {
+    where.isBlocked = isBlocked === "true";
+  }
+
+  const [shops, total] = await Promise.all([
+    prisma.shop.findMany({
+      where,
+      skip,
+      take: parseInt(limit),
+      include: {
+        owner: {
+          select: {
+            id: true,
+            username: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        _count: {
+          select: {
+            products: true,
+            orders: true,
+            followers: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.shop.count({ where }),
+  ]);
+
+  res.status(200).json({
+    success: true,
+    data: shops,
+    pagination: {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  });
+});
+
 // @desc    Get pending shop verifications
 // @route   GET /api/admin/shops/pending
 // @access  Private/Admin
@@ -180,7 +244,7 @@ export const getPendingShops = asyncHandler(async (req, res) => {
   const [shops, total] = await Promise.all([
     prisma.shop.findMany({
       where: {
-        verificationStatus: "pending",
+        verificationStatus: "PENDING",
       },
       skip,
       take: limit,
@@ -203,7 +267,7 @@ export const getPendingShops = asyncHandler(async (req, res) => {
       orderBy: { createdAt: "asc" },
     }),
     prisma.shop.count({
-      where: { verificationStatus: "pending" },
+      where: { verificationStatus: "PENDING" },
     }),
   ]);
 
