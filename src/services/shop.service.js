@@ -41,7 +41,7 @@ class ShopService {
 
   // Update shop
   async updateShop(shopId, updateData, userId) {
-    // Check ownership or admin
+    // Check ownership - only owner can update shop
     const shop = await prisma.shop.findUnique({
       where: { id: shopId },
     });
@@ -50,13 +50,20 @@ class ShopService {
       throw new AppError("Shop not found", 404);
     }
 
+    // Only shop owner can update shop information
     if (shop.ownerId !== userId) {
-      throw new AppError("Not authorized to update this shop", 403);
+      throw new AppError(
+        "Not authorized to update this shop. Only shop owner can modify shop information.",
+        403,
+      );
     }
+
+    // Filter out fields that don't exist in the schema
+    const { website, ...validUpdateData } = updateData;
 
     const updatedShop = await prisma.shop.update({
       where: { id: shopId },
-      data: updateData,
+      data: validUpdateData,
       include: {
         owner: {
           select: {
@@ -75,11 +82,17 @@ class ShopService {
 
   // Get all shops with pagination and filters
   async getAllShops(query) {
-    const { page, limit, search, category, isVerified, isBlocked, sortBy } =
+    const { page, limit, search, category, isVerified, isBlocked, sortBy, ownerId } =
       query;
     const { skip, take } = getPagination(page, limit);
 
-    const where = {};
+    const where = {
+      deletedAt: null, // Exclude soft deleted shops
+    };
+
+    if (ownerId) {
+      where.ownerId = ownerId;
+    }
 
     if (search) {
       where.OR = [
@@ -143,8 +156,14 @@ class ShopService {
 
   // Get shop by ID
   async getShopById(shopId) {
-    const shop = await prisma.shop.findUnique({
-      where: { id: shopId },
+    // Try to find by ID first, then by slug
+    const where =
+      shopId.includes("-") && shopId.length > 30
+        ? { id: shopId }
+        : { slug: shopId };
+
+    const shop = await prisma.shop.findFirst({
+      where,
       include: {
         owner: {
           select: {
@@ -170,11 +189,10 @@ class ShopService {
           },
         },
         rankingPoints: {
-          orderBy: { date: "desc" },
+          orderBy: { createdAt: "desc" },
           take: 1,
         },
         strikes: {
-          where: { isActive: true },
           orderBy: { createdAt: "desc" },
         },
         _count: {
@@ -212,8 +230,8 @@ class ShopService {
       data: {
         userId: verifiedBy,
         action: "VERIFY_SHOP",
-        targetType: "Shop",
-        targetId: shopId,
+        entityType: "SHOP",
+        entityId: shopId,
       },
     });
 
@@ -235,9 +253,9 @@ class ShopService {
       data: {
         userId: rejectedBy,
         action: "REJECT_SHOP",
-        targetType: "Shop",
-        targetId: shopId,
-        details: { reason },
+        entityType: "SHOP",
+        entityId: shopId,
+        metadata: { reason },
       },
     });
 
@@ -260,9 +278,9 @@ class ShopService {
       data: {
         userId: blockedBy,
         action: "BLOCK_SHOP",
-        targetType: "Shop",
-        targetId: shopId,
-        details: { reason },
+        entityType: "SHOP",
+        entityId: shopId,
+        metadata: { reason },
       },
     });
 
@@ -285,8 +303,8 @@ class ShopService {
       data: {
         userId: unblockedBy,
         action: "UNBLOCK_SHOP",
-        targetType: "Shop",
-        targetId: shopId,
+        entityType: "SHOP",
+        entityId: shopId,
       },
     });
 
@@ -316,9 +334,9 @@ class ShopService {
       data: {
         userId: issuedBy,
         action: "ISSUE_STRIKE",
-        targetType: "Shop",
-        targetId: shopId,
-        details: { reason, severity },
+        entityType: "SHOP",
+        entityId: shopId,
+        metadata: { reason, severity },
       },
     });
 
@@ -438,7 +456,7 @@ class ShopService {
     return { message: "Unfollowed successfully" };
   }
 
-  // Delete shop
+  // Delete shop (soft delete with cascading)
   async deleteShop(shopId, userId) {
     const shop = await prisma.shop.findUnique({
       where: { id: shopId },
@@ -448,18 +466,110 @@ class ShopService {
       throw new AppError("Shop not found", 404);
     }
 
+    // Only shop owner can delete shop
     if (shop.ownerId !== userId) {
-      throw new AppError("Not authorized to delete this shop", 403);
+      throw new AppError(
+        "Not authorized to delete this shop. Only shop owner can delete the shop.",
+        403,
+      );
     }
 
-    await prisma.shop.update({
-      where: { id: shopId },
-      data: {
-        deletedAt: new Date(),
-      },
+    const now = new Date();
+
+    // Soft delete shop and all related data
+    await prisma.$transaction(async (tx) => {
+      // Delete shop
+      await tx.shop.update({
+        where: { id: shopId },
+        data: { deletedAt: now },
+      });
+
+      // Soft delete all products
+      await tx.product.updateMany({
+        where: { shopId },
+        data: { deletedAt: now },
+      });
+
+      // Soft delete all services
+      await tx.service.updateMany({
+        where: { shopId },
+        data: { deletedAt: now },
+      });
+
+      // Soft delete all posts
+      await tx.post.updateMany({
+        where: { shopId },
+        data: { deletedAt: now },
+      });
+
+      // Log the deletion
+      await tx.activityLog.create({
+        data: {
+          userId,
+          action: "delete_shop",
+          entityType: "shop",
+          entityId: shopId,
+          metadata: { cascadedDelete: true },
+        },
+      });
     });
 
-    return { message: "Shop deleted successfully" };
+    return { message: "Shop and all related data deleted successfully" };
+  }
+
+  // Restore shop (admin only)
+  async restoreShop(shopId, adminId) {
+    const shop = await prisma.shop.findUnique({
+      where: { id: shopId },
+    });
+
+    if (!shop) {
+      throw new AppError("Shop not found", 404);
+    }
+
+    if (!shop.deletedAt) {
+      throw new AppError("Shop is not deleted", 400);
+    }
+
+    // Restore shop and all related data
+    await prisma.$transaction(async (tx) => {
+      // Restore shop
+      await tx.shop.update({
+        where: { id: shopId },
+        data: { deletedAt: null },
+      });
+
+      // Restore all products
+      await tx.product.updateMany({
+        where: { shopId, deletedAt: { not: null } },
+        data: { deletedAt: null },
+      });
+
+      // Restore all services
+      await tx.service.updateMany({
+        where: { shopId, deletedAt: { not: null } },
+        data: { deletedAt: null },
+      });
+
+      // Restore all posts
+      await tx.post.updateMany({
+        where: { shopId, deletedAt: { not: null } },
+        data: { deletedAt: null },
+      });
+
+      // Log the restoration
+      await tx.activityLog.create({
+        data: {
+          userId: adminId,
+          action: "restore_shop",
+          entityType: "shop",
+          entityId: shopId,
+          metadata: { cascadedRestore: true },
+        },
+      });
+    });
+
+    return { message: "Shop and all related data restored successfully" };
   }
 }
 

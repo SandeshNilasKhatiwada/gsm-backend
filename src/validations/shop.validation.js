@@ -48,10 +48,21 @@ export const verifyShopSchema = z.object({
   params: z.object({
     id: z.string().uuid("Invalid shop ID format"),
   }),
-  body: z.object({
-    status: z.enum(["approved", "rejected"]),
-    rejectionReason: z.string().min(10).optional(),
+});
+
+// Reject shop validation
+export const rejectShopSchema = z.object({
+  params: z.object({
+    id: z.string().uuid("Invalid shop ID format"),
   }),
+  body: z
+    .object({
+      reason: z
+        .string()
+        .min(10, "Rejection reason must be at least 10 characters")
+        .optional(),
+    })
+    .optional(),
 });
 
 // Block shop validation

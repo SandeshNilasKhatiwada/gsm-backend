@@ -6,8 +6,15 @@ import { AppError } from "../utils/error.util.js";
 class AuthService {
   // Register new user
   async register(userData) {
-    const { email, username, password, firstName, lastName, phoneNumber, userType } =
-      userData;
+    const {
+      email,
+      username,
+      password,
+      firstName,
+      lastName,
+      phoneNumber,
+      userType,
+    } = userData;
 
     // Check if email already exists
     const existingUser = await prisma.user.findFirst({
@@ -87,9 +94,12 @@ class AuthService {
 
   // Login user
   async login(email, password) {
-    // Find user
+    // Find user (exclude deleted users)
     const user = await prisma.user.findFirst({
-      where: { email },
+      where: {
+        email,
+        deletedAt: null,
+      },
       include: {
         roles: {
           where: { status: "approved" },
@@ -109,7 +119,7 @@ class AuthService {
     });
 
     if (!user) {
-      throw new AppError("Invalid credentials", 401);
+      throw new AppError("User not found", 404);
     }
 
     // Check if account is active
@@ -117,8 +127,9 @@ class AuthService {
       throw new AppError("Account is inactive", 403);
     }
 
+    // Check if account is blocked
     if (user.isBlocked) {
-      throw new AppError(`Account is blocked: ${user.blockedReason}`, 403);
+      throw new AppError("You are blocked. Please contact administrator.", 403);
     }
 
     // Verify password

@@ -60,7 +60,7 @@ class RoleService {
           },
           _count: {
             select: {
-              userRoles: true,
+              roles: true,
             },
           },
         },
@@ -89,7 +89,7 @@ class RoleService {
             permission: true,
           },
         },
-        userRoles: {
+        roles: {
           include: {
             user: {
               select: {
@@ -104,7 +104,7 @@ class RoleService {
         },
         _count: {
           select: {
-            userRoles: true,
+            roles: true,
           },
         },
       },

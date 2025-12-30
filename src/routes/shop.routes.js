@@ -3,6 +3,7 @@ import {
   createShop,
   updateShop,
   getAllShops,
+  getMyShops,
   getShopById,
   verifyShop,
   rejectShop,
@@ -14,11 +15,13 @@ import {
   followShop,
   unfollowShop,
   deleteShop,
+  restoreShop,
 } from "../controllers/shop.controller.js";
 import {
   createService,
   getShopServices,
 } from "../controllers/service.controller.js";
+import { getAllProducts } from "../controllers/product.controller.js";
 import {
   auth,
   requireRole,
@@ -29,6 +32,7 @@ import {
   createShopSchema,
   updateShopSchema,
   verifyShopSchema,
+  rejectShopSchema,
   blockShopSchema,
   issueStrikeSchema,
   addStaffSchema,
@@ -44,6 +48,7 @@ router.get(
   validate(getAllShopsSchema, "query"),
   getAllShops,
 );
+router.get("/my-shops", auth, getMyShops);
 router.get("/:id", optionalAuth, getShopById);
 
 // Private routes
@@ -56,13 +61,13 @@ router.delete("/:id", deleteShop);
 router.put(
   "/:id/verify",
   requireRole("admin"),
-  validate(verifyShopSchema, "params"),
+  validate(verifyShopSchema),
   verifyShop,
 );
 router.put(
   "/:id/reject",
   requireRole("admin"),
-  validate(verifyShopSchema, "params"),
+  validate(rejectShopSchema),
   rejectShop,
 );
 router.put(
@@ -72,6 +77,7 @@ router.put(
   blockShop,
 );
 router.put("/:id/unblock", requireRole("admin"), unblockShop);
+router.put("/:id/restore", requireRole("admin"), restoreShop);
 router.post(
   "/:id/strike",
   requireRole("admin"),
@@ -90,5 +96,11 @@ router.delete("/:id/follow", unfollowShop);
 // Services
 router.post("/:shopId/services", auth, createService);
 router.get("/:shopId/services", getShopServices);
+
+// Products
+router.get("/:shopId/products", (req, res, next) => {
+  req.query.shopId = req.params.shopId;
+  next();
+}, getAllProducts);
 
 export default router;

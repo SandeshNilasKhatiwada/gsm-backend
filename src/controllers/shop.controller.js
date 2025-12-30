@@ -43,6 +43,21 @@ export const getAllShops = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Get current user's shops
+// @route   GET /api/shops/my-shops
+// @access  Private
+export const getMyShops = asyncHandler(async (req, res) => {
+  const result = await shopService.getAllShops({
+    ...req.query,
+    ownerId: req.user.id,
+  });
+
+  res.json({
+    success: true,
+    ...result,
+  });
+});
+
 // @desc    Get shop by ID
 // @route   GET /api/shops/:id
 // @access  Public
@@ -193,5 +208,17 @@ export const deleteShop = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     message: "Shop deleted successfully",
+  });
+});
+
+// @desc    Restore shop
+// @route   PUT /api/shops/:id/restore
+// @access  Private/Admin
+export const restoreShop = asyncHandler(async (req, res) => {
+  const result = await shopService.restoreShop(req.params.id, req.user.id);
+
+  res.json({
+    success: true,
+    ...result,
   });
 });

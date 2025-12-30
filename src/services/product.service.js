@@ -4,6 +4,44 @@ import { getPagination, paginationResponse } from "../utils/pagination.util.js";
 import { AppError } from "../utils/error.util.js";
 
 class ProductService {
+  // Helper method to check if user can manage shop (owner or staff with appropriate role)
+  async checkShopManagePermission(
+    shopId,
+    userId,
+    requiredRoles = ["manager", "editor"],
+  ) {
+    const shop = await prisma.shop.findUnique({
+      where: { id: shopId },
+      include: {
+        staff: {
+          where: {
+            userId: userId,
+            removedAt: null,
+          },
+        },
+      },
+    });
+
+    if (!shop) {
+      throw new AppError("Shop not found", 404);
+    }
+
+    const isOwner = shop.ownerId === userId;
+    const staffMember = shop.staff.find((s) => s.userId === userId);
+    const hasRequiredRole =
+      staffMember && requiredRoles.includes(staffMember.role);
+
+    if (!isOwner && !hasRequiredRole) {
+      throw new AppError(
+        `Not authorized. Only shop owner or staff with ${requiredRoles.join(
+          "/",
+        )} role can perform this action.`,
+        403,
+      );
+    }
+
+    return shop;
+  }
   // Create product
   async createProduct(productData, shopId, userId) {
     const {
@@ -19,18 +57,8 @@ class ProductService {
       isActive,
     } = productData;
 
-    // Verify shop ownership
-    const shop = await prisma.shop.findUnique({
-      where: { id: shopId },
-    });
-
-    if (!shop) {
-      throw new AppError("Shop not found", 404);
-    }
-
-    if (shop.ownerId !== userId) {
-      throw new AppError("Not authorized to add products to this shop", 403);
-    }
+    // Verify shop ownership or staff access
+    await this.checkShopManagePermission(shopId, userId, ["manager", "editor"]);
 
     // Generate slug
     const slug = generateSlug(name);
@@ -49,6 +77,7 @@ class ProductService {
         category,
         tags,
         isActive,
+        createdBy: userId,
       },
       include: {
         shop: {
@@ -76,9 +105,11 @@ class ProductService {
       throw new AppError("Product not found", 404);
     }
 
-    if (product.shop.ownerId !== userId) {
-      throw new AppError("Not authorized to update this product", 403);
-    }
+    // Verify shop ownership or staff access
+    await this.checkShopManagePermission(product.shopId, userId, [
+      "manager",
+      "editor",
+    ]);
 
     const updatedProduct = await prisma.product.update({
       where: { id: productId },
@@ -232,9 +263,8 @@ class ProductService {
       throw new AppError("Product not found", 404);
     }
 
-    if (product.shop.ownerId !== userId) {
-      throw new AppError("Not authorized to delete this product", 403);
-    }
+    // Verify shop ownership or staff access (manager only for deletion)
+    await this.checkShopManagePermission(product.shopId, userId, ["manager"]);
 
     await prisma.product.update({
       where: { id: productId },

@@ -2,13 +2,20 @@ import prisma from "../config/database.js";
 import { AppError } from "../utils/error.util.js";
 
 class ServiceService {
-  async createService(shopId, userId, data) {
-    // Verify shop exists and user is owner or staff
+  // Helper method to check if user can manage shop (owner or staff with appropriate role)
+  async checkShopManagePermission(
+    shopId,
+    userId,
+    requiredRoles = ["manager", "editor"],
+  ) {
     const shop = await prisma.shop.findUnique({
       where: { id: shopId },
       include: {
         staff: {
-          where: { userId },
+          where: {
+            userId: userId,
+            removedAt: null,
+          },
         },
       },
     });
@@ -17,12 +24,25 @@ class ServiceService {
       throw new AppError("Shop not found", 404);
     }
 
-    if (shop.ownerId !== userId && shop.staff.length === 0) {
+    const isOwner = shop.ownerId === userId;
+    const staffMember = shop.staff.find((s) => s.userId === userId);
+    const hasRequiredRole =
+      staffMember && requiredRoles.includes(staffMember.role);
+
+    if (!isOwner && !hasRequiredRole) {
       throw new AppError(
-        "You don't have permission to create services for this shop",
+        `Not authorized. Only shop owner or staff with ${requiredRoles.join(
+          "/",
+        )} role can perform this action.`,
         403,
       );
     }
+
+    return shop;
+  }
+  async createService(shopId, userId, data) {
+    // Verify shop exists and user is owner or staff with manager/editor role
+    await this.checkShopManagePermission(shopId, userId, ["manager", "editor"]);
 
     const service = await prisma.service.create({
       data: {
@@ -51,7 +71,9 @@ class ServiceService {
 
   async getShopServices(shopId, filters = {}) {
     const { page = 1, limit = 20, isActive } = filters;
-    const skip = (page - 1) * limit;
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
 
     const where = { shopId };
 
@@ -63,7 +85,7 @@ class ServiceService {
       prisma.service.findMany({
         where,
         skip,
-        take: limit,
+        take: limitNum,
         include: {
           shop: {
             select: {
@@ -87,10 +109,10 @@ class ServiceService {
     return {
       services,
       pagination: {
-        page,
-        limit,
+        page: pageNum,
+        limit: limitNum,
         total,
-        totalPages: Math.ceil(total / limit),
+        totalPages: Math.ceil(total / limitNum),
       },
     };
   }
@@ -104,7 +126,9 @@ class ServiceService {
       minPrice,
       maxPrice,
     } = filters;
-    const skip = (page - 1) * limit;
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
 
     const where = {};
 
@@ -129,7 +153,7 @@ class ServiceService {
       prisma.service.findMany({
         where,
         skip,
-        take: limit,
+        take: limitNum,
         include: {
           shop: {
             select: {
@@ -154,10 +178,10 @@ class ServiceService {
     return {
       services,
       pagination: {
-        page,
-        limit,
+        page: pageNum,
+        limit: limitNum,
         total,
-        totalPages: Math.ceil(total / limit),
+        totalPages: Math.ceil(total / limitNum),
       },
     };
   }
@@ -209,27 +233,17 @@ class ServiceService {
   async updateService(serviceId, userId, data) {
     const service = await prisma.service.findUnique({
       where: { id: serviceId },
-      include: {
-        shop: {
-          include: {
-            staff: {
-              where: { userId },
-            },
-          },
-        },
-      },
     });
 
     if (!service) {
       throw new AppError("Service not found", 404);
     }
 
-    if (service.shop.ownerId !== userId && service.shop.staff.length === 0) {
-      throw new AppError(
-        "You don't have permission to update this service",
-        403,
-      );
-    }
+    // Verify shop ownership or staff access with manager/editor role
+    await this.checkShopManagePermission(service.shopId, userId, [
+      "manager",
+      "editor",
+    ]);
 
     const updatedService = await prisma.service.update({
       where: { id: serviceId },
@@ -260,27 +274,14 @@ class ServiceService {
   async deleteService(serviceId, userId) {
     const service = await prisma.service.findUnique({
       where: { id: serviceId },
-      include: {
-        shop: {
-          include: {
-            staff: {
-              where: { userId },
-            },
-          },
-        },
-      },
     });
 
     if (!service) {
       throw new AppError("Service not found", 404);
     }
 
-    if (service.shop.ownerId !== userId && service.shop.staff.length === 0) {
-      throw new AppError(
-        "You don't have permission to delete this service",
-        403,
-      );
-    }
+    // Verify shop ownership or staff access with manager role (deletion is sensitive)
+    await this.checkShopManagePermission(service.shopId, userId, ["manager"]);
 
     await prisma.service.delete({
       where: { id: serviceId },
