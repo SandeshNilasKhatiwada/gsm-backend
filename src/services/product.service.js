@@ -42,6 +42,46 @@ class ProductService {
 
     return shop;
   }
+
+  // Helper method to check if user is admin
+  async checkIfUserIsAdmin(userId) {
+    const userRole = await prisma.userRole.findFirst({
+      where: {
+        userId: userId,
+        role: {
+          name: "admin",
+        },
+        status: "approved",
+      },
+    });
+
+    return !!userRole;
+  }
+
+  // Helper method to check if user owns or manages a shop
+  async checkIfUserCanAccessShopProduct(userId, shopId) {
+    const shop = await prisma.shop.findUnique({
+      where: { id: shopId },
+      include: {
+        staff: {
+          where: {
+            userId: userId,
+            removedAt: null,
+          },
+        },
+      },
+    });
+
+    if (!shop) {
+      return false;
+    }
+
+    const isOwner = shop.ownerId === userId;
+    const isStaff = shop.staff.some((s) => s.userId === userId);
+
+    return isOwner || isStaff;
+  }
+
   // Create product
   async createProduct(productData, shopId, userId) {
     const {
@@ -130,7 +170,7 @@ class ProductService {
   }
 
   // Get all products with pagination and filters
-  async getAllProducts(query) {
+  async getAllProducts(query, user = null) {
     const {
       page,
       limit,
@@ -143,7 +183,28 @@ class ProductService {
     } = query;
     const { skip, take } = getPagination(page, limit);
 
-    const where = { isActive: true };
+    // Check if user is admin or shop owner/staff
+    let isAdmin = false;
+    let canAccessShop = false;
+    
+    if (user) {
+      isAdmin = await this.checkIfUserIsAdmin(user.id);
+      
+      // If filtering by shopId, check if user can access that shop
+      if (shopId && !isAdmin) {
+        canAccessShop = await this.checkIfUserCanAccessShopProduct(user.id, shopId);
+      }
+    }
+
+    const where = {
+      isActive: true,
+      deletedAt: null, // Exclude soft deleted products
+    };
+
+    // Only exclude blocked products if user is not admin and not shop owner/staff
+    if (!isAdmin && !canAccessShop) {
+      where.isBlocked = false;
+    }
 
     if (search) {
       where.OR = [
@@ -208,7 +269,7 @@ class ProductService {
   }
 
   // Get product by ID
-  async getProductById(productId) {
+  async getProductById(productId, user = null) {
     const product = await prisma.product.findUnique({
       where: { id: productId },
       include: {
@@ -249,6 +310,24 @@ class ProductService {
       throw new AppError("Product not found", 404);
     }
 
+    // Check if product is blocked - allow admins and shop owners to view blocked products
+    if (product.isBlocked) {
+      if (user) {
+        // Check if user is admin
+        const isAdmin = await this.checkIfUserIsAdmin(user.id);
+        
+        // Check if user owns/manages the shop
+        const canAccessShop = await this.checkIfUserCanAccessShopProduct(user.id, product.shopId);
+        
+        if (!isAdmin && !canAccessShop) {
+          throw new AppError("This product is currently unavailable", 403);
+        }
+      } else {
+        // No user logged in, block access
+        throw new AppError("This product is currently unavailable", 403);
+      }
+    }
+
     return product;
   }
 
@@ -286,6 +365,104 @@ class ProductService {
     });
 
     return product;
+  }
+
+  // Submit appeal for blocked product
+  async submitAppeal(productId, message, userId) {
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+    });
+
+    if (!product) {
+      throw new AppError("Product not found", 404);
+    }
+
+    if (!product.isBlocked) {
+      throw new AppError("This product is not blocked", 400);
+    }
+
+    // Verify shop ownership or staff access
+    await this.checkShopManagePermission(product.shopId, userId, [
+      "manager",
+      "editor",
+    ]);
+
+    // Check if there's already a pending appeal
+    if (product.appealStatus === "pending") {
+      throw new AppError("An appeal is already pending for this product", 400);
+    }
+
+    const updatedProduct = await prisma.product.update({
+      where: { id: productId },
+      data: {
+        appealStatus: "pending",
+        appealMessage: message,
+        appealedAt: new Date(),
+        appealResponse: null,
+        appealReviewedAt: null,
+        appealReviewedBy: null,
+      },
+    });
+
+    return updatedProduct;
+  }
+
+  // Get blocked products for shop owner
+  async getMyBlockedProducts(userId, query) {
+    const { page, limit } = query;
+    const { skip, take } = getPagination(page, limit);
+
+    // Find all shops where user is owner or staff
+    const shops = await prisma.shop.findMany({
+      where: {
+        OR: [
+          { ownerId: userId },
+          {
+            staff: {
+              some: {
+                userId: userId,
+                removedAt: null,
+              },
+            },
+          },
+        ],
+      },
+      select: { id: true },
+    });
+
+    const shopIds = shops.map((shop) => shop.id);
+
+    if (shopIds.length === 0) {
+      return paginationResponse([], 0, page, limit);
+    }
+
+    const where = {
+      isBlocked: true,
+      shopId: { in: shopIds },
+      deletedAt: null,
+    };
+
+    const [products, total] = await Promise.all([
+      prisma.product.findMany({
+        where,
+        skip,
+        take,
+        include: {
+          shop: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              logoUrl: true,
+            },
+          },
+        },
+        orderBy: { blockedAt: "desc" },
+      }),
+      prisma.product.count({ where }),
+    ]);
+
+    return paginationResponse(products, total, page, limit);
   }
 }
 

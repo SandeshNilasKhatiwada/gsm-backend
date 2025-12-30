@@ -1,4 +1,5 @@
 import express from "express";
+import { prisma } from "../config/database.js";
 import {
   createShop,
   updateShop,
@@ -51,6 +52,38 @@ router.get(
 router.get("/my-shops", auth, getMyShops);
 router.get("/:id", optionalAuth, getShopById);
 
+// Shop products and services (public)
+router.get(
+  "/:shopId/products",
+  optionalAuth,
+  async (req, res, next) => {
+    try {
+      // Find shop by ID or slug
+      const shopIdOrSlug = req.params.shopId;
+      const where =
+        shopIdOrSlug.includes("-") && shopIdOrSlug.length > 30
+          ? { id: shopIdOrSlug }
+          : { slug: shopIdOrSlug };
+
+      const shop = await prisma.shop.findFirst({ where, select: { id: true } });
+
+      if (!shop) {
+        return res.status(404).json({
+          success: false,
+          message: "Shop not found",
+        });
+      }
+
+      req.query.shopId = shop.id;
+      next();
+    } catch (error) {
+      next(error);
+    }
+  },
+  getAllProducts,
+);
+router.get("/:shopId/services", getShopServices);
+
 // Private routes
 router.use(auth);
 router.post("/", validate(createShopSchema), createShop);
@@ -93,18 +126,7 @@ router.delete("/:shopId/staff/:staffId", removeStaff);
 router.post("/:id/follow", followShop);
 router.delete("/:id/follow", unfollowShop);
 
-// Services
-router.post("/:shopId/services", auth, createService);
-router.get("/:shopId/services", getShopServices);
-
-// Products
-router.get(
-  "/:shopId/products",
-  (req, res, next) => {
-    req.query.shopId = req.params.shopId;
-    next();
-  },
-  getAllProducts,
-);
+// Create service (requires auth)
+router.post("/:shopId/services", createService);
 
 export default router;

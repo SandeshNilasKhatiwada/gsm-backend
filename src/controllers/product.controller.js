@@ -40,7 +40,7 @@ export const updateProduct = asyncHandler(async (req, res) => {
 // @route   GET /api/products
 // @access  Public
 export const getAllProducts = asyncHandler(async (req, res) => {
-  const result = await productService.getAllProducts(req.query);
+  const result = await productService.getAllProducts(req.query, req.user);
 
   res.json({
     success: true,
@@ -52,7 +52,7 @@ export const getAllProducts = asyncHandler(async (req, res) => {
 // @route   GET /api/products/:id
 // @access  Public
 export const getProductById = asyncHandler(async (req, res) => {
-  const product = await productService.getProductById(req.params.id);
+  const product = await productService.getProductById(req.params.id, req.user);
 
   res.json({
     success: true,
@@ -83,5 +83,38 @@ export const updateStock = asyncHandler(async (req, res) => {
     success: true,
     message: "Stock updated successfully",
     data: product,
+  });
+});
+
+// @desc    Submit appeal for blocked product
+// @route   POST /api/products/:id/appeal
+// @access  Private (Shop Owner/Staff)
+export const submitAppeal = asyncHandler(async (req, res) => {
+  const { message } = req.body;
+  const product = await productService.submitAppeal(
+    req.params.id,
+    message,
+    req.user.id,
+  );
+
+  res.json({
+    success: true,
+    message: "Appeal submitted successfully",
+    data: product,
+  });
+});
+
+// @desc    Get blocked products for shop owner
+// @route   GET /api/products/blocked/my-products
+// @access  Private (Shop Owner/Staff)
+export const getMyBlockedProducts = asyncHandler(async (req, res) => {
+  const result = await productService.getMyBlockedProducts(
+    req.user.id,
+    req.query,
+  );
+
+  res.json({
+    success: true,
+    ...result,
   });
 });

@@ -22,6 +22,12 @@ import {
   getActivityLogs,
   moderateContent,
   getReports,
+  getProducts,
+  blockProduct,
+  unblockProduct,
+  deleteProductByAdmin,
+  getProductAppeals,
+  reviewProductAppeal,
 } from "../controllers/admin.controller.js";
 import { auth } from "../middlewares/auth.middleware.js";
 
@@ -49,6 +55,12 @@ router.put("/shops/:id/block", blockShop);
 router.put("/shops/:id/unblock", unblockShop);
 router.delete("/shops/:id", deleteShopByAdmin);
 router.put("/shops/:id/restore", restoreShop);
+router.get("/products/appeals", getProductAppeals);
+router.get("/products", getProducts);
+router.put("/products/:id/block", blockProduct);
+router.put("/products/:id/unblock", unblockProduct);
+router.put("/products/:id/appeal/review", reviewProductAppeal);
+router.delete("/products/:id", deleteProductByAdmin);
 router.get("/activity-logs", getActivityLogs);
 router.post("/moderate", moderateContent);
 router.get("/reports", getReports);

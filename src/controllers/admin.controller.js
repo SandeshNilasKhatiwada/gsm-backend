@@ -1212,3 +1212,372 @@ export const deleteShopByAdmin = asyncHandler(async (req, res) => {
     message: "Shop deleted successfully",
   });
 });
+// @desc    Get all products for admin
+// @route   GET /api/admin/products
+// @access  Private/Admin
+export const getProducts = asyncHandler(async (req, res) => {
+  const {
+    page = 1,
+    limit = 20,
+    search,
+    category,
+    shopId,
+    isBlocked,
+    isActive,
+  } = req.query;
+
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+  const where = {};
+
+  if (search) {
+    where.OR = [
+      { name: { contains: search, mode: "insensitive" } },
+      { description: { contains: search, mode: "insensitive" } },
+    ];
+  }
+
+  if (category && category !== "all") {
+    where.category = category;
+  }
+
+  if (shopId) {
+    where.shopId = shopId;
+  }
+
+  if (isBlocked !== undefined) {
+    where.isBlocked = isBlocked === "true";
+  }
+
+  if (isActive !== undefined) {
+    where.isActive = isActive === "true";
+  }
+
+  const [products, total] = await Promise.all([
+    prisma.product.findMany({
+      where,
+      skip,
+      take: parseInt(limit),
+      orderBy: { createdAt: "desc" },
+      include: {
+        shop: {
+          select: {
+            id: true,
+            name: true,
+            logoUrl: true,
+          },
+        },
+        creator: {
+          select: {
+            id: true,
+            username: true,
+            email: true,
+          },
+        },
+      },
+    }),
+    prisma.product.count({ where }),
+  ]);
+
+  res.status(200).json({
+    success: true,
+    data: products,
+    pagination: {
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(total / parseInt(limit)),
+    },
+  });
+});
+
+// @desc    Block a product
+// @route   PUT /api/admin/products/:id/block
+// @access  Private/Admin
+export const blockProduct = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { reason } = req.body;
+
+  if (!reason) {
+    res.status(400);
+    throw new Error("Reason for blocking is required");
+  }
+
+  const product = await prisma.product.findUnique({
+    where: { id },
+    include: { shop: true },
+  });
+
+  if (!product) {
+    res.status(404);
+    throw new Error("Product not found");
+  }
+
+  if (product.isBlocked) {
+    res.status(400);
+    throw new Error("Product is already blocked");
+  }
+
+  const updatedProduct = await prisma.product.update({
+    where: { id },
+    data: {
+      isBlocked: true,
+      blockedReason: reason,
+      blockedAt: new Date(),
+      blockedBy: req.user.id,
+      isActive: false,
+      appealStatus: null,
+      appealMessage: null,
+      appealedAt: null,
+      appealResponse: null,
+      appealReviewedAt: null,
+      appealReviewedBy: null,
+    },
+  });
+
+  // Log the activity
+  await prisma.activityLog.create({
+    data: {
+      userId: req.user.id,
+      action: "PRODUCT_BLOCKED",
+      entityType: "PRODUCT",
+      entityId: id,
+      metadata: {
+        reason,
+        productName: product.name,
+        shopName: product.shop.name,
+      },
+    },
+  });
+
+  res.status(200).json({
+    success: true,
+    data: updatedProduct,
+    message: "Product blocked successfully",
+  });
+});
+
+// @desc    Unblock a product
+// @route   PUT /api/admin/products/:id/unblock
+// @access  Private/Admin
+export const unblockProduct = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const product = await prisma.product.findUnique({
+    where: { id },
+    include: { shop: true },
+  });
+
+  if (!product) {
+    res.status(404);
+    throw new Error("Product not found");
+  }
+
+  if (!product.isBlocked) {
+    res.status(400);
+    throw new Error("Product is not blocked");
+  }
+
+  const updatedProduct = await prisma.product.update({
+    where: { id },
+    data: {
+      isBlocked: false,
+      blockedReason: null,
+      blockedAt: null,
+      blockedBy: null,
+      isActive: true,
+      appealStatus: null,
+      appealMessage: null,
+      appealedAt: null,
+      appealResponse: null,
+      appealReviewedAt: null,
+      appealReviewedBy: null,
+    },
+  });
+
+  // Log the activity
+  await prisma.activityLog.create({
+    data: {
+      userId: req.user.id,
+      action: "PRODUCT_UNBLOCKED",
+      entityType: "PRODUCT",
+      entityId: id,
+      metadata: {
+        productName: product.name,
+        shopName: product.shop.name,
+      },
+    },
+  });
+
+  res.status(200).json({
+    success: true,
+    data: updatedProduct,
+    message: "Product unblocked successfully",
+  });
+});
+
+// @desc    Get product appeals
+// @route   GET /api/admin/products/appeals
+// @access  Private/Admin
+export const getProductAppeals = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 10, status } = req.query;
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+  const take = parseInt(limit);
+
+  const where = {
+    isBlocked: true,
+    appealStatus: status || { not: null },
+  };
+
+  const [appeals, total] = await Promise.all([
+    prisma.product.findMany({
+      where,
+      skip,
+      take,
+      include: {
+        shop: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            logoUrl: true,
+          },
+        },
+      },
+      orderBy: { appealedAt: "desc" },
+    }),
+    prisma.product.count({ where }),
+  ]);
+
+  const totalPages = Math.ceil(total / take);
+
+  res.status(200).json({
+    success: true,
+    data: appeals,
+    pagination: {
+      total,
+      page: parseInt(page),
+      limit: take,
+      totalPages,
+    },
+  });
+});
+
+// @desc    Review product appeal
+// @route   PUT /api/admin/products/:id/appeal/review
+// @access  Private/Admin
+export const reviewProductAppeal = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { decision, response } = req.body;
+
+  if (!decision || !['approved', 'rejected'].includes(decision)) {
+    res.status(400);
+    throw new Error("Decision must be 'approved' or 'rejected'");
+  }
+
+  const product = await prisma.product.findUnique({
+    where: { id },
+    include: { shop: true },
+  });
+
+  if (!product) {
+    res.status(404);
+    throw new Error("Product not found");
+  }
+
+  if (!product.isBlocked || product.appealStatus !== "pending") {
+    res.status(400);
+    throw new Error("No pending appeal found for this product");
+  }
+
+  const updateData = {
+    appealStatus: decision,
+    appealResponse: response || null,
+    appealReviewedAt: new Date(),
+    appealReviewedBy: req.user.id,
+  };
+
+  // If appeal is approved, unblock the product
+  if (decision === "approved") {
+    updateData.isBlocked = false;
+    updateData.blockedReason = null;
+    updateData.blockedAt = null;
+    updateData.blockedBy = null;
+    updateData.isActive = true;
+  }
+
+  const updatedProduct = await prisma.product.update({
+    where: { id },
+    data: updateData,
+  });
+
+  // Log the activity
+  await prisma.activityLog.create({
+    data: {
+      userId: req.user.id,
+      action: decision === "approved" ? "APPEAL_APPROVED" : "APPEAL_REJECTED",
+      entityType: "PRODUCT",
+      entityId: id,
+      metadata: {
+        productName: product.name,
+        shopName: product.shop.name,
+        response: response || null,
+      },
+    },
+  });
+
+  res.status(200).json({
+    success: true,
+    data: updatedProduct,
+    message: `Appeal ${decision} successfully`,
+  });
+});
+
+// @desc    Delete a product (soft delete)
+// @route   DELETE /api/admin/products/:id
+// @access  Private/Admin
+export const deleteProductByAdmin = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const product = await prisma.product.findUnique({
+    where: { id },
+    include: { shop: true },
+  });
+
+  if (!product) {
+    res.status(404);
+    throw new Error("Product not found");
+  }
+
+  if (product.deletedAt) {
+    res.status(400);
+    throw new Error("Product is already deleted");
+  }
+
+  const updatedProduct = await prisma.product.update({
+    where: { id },
+    data: {
+      deletedAt: new Date(),
+      isActive: false,
+    },
+  });
+
+  // Log the activity
+  await prisma.activityLog.create({
+    data: {
+      userId: req.user.id,
+      action: "PRODUCT_DELETED",
+      entityType: "PRODUCT",
+      entityId: id,
+      metadata: {
+        productName: product.name,
+        shopName: product.shop.name,
+      },
+    },
+  });
+
+  res.status(200).json({
+    success: true,
+    data: updatedProduct,
+    message: "Product deleted successfully",
+  });
+});

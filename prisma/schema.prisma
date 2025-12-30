@@ -320,6 +320,16 @@ model Product {
     tags           Json?
     isActive       Boolean   @default(true) @map("is_active")
     isFeatured     Boolean   @default(false) @map("is_featured")
+    isBlocked      Boolean   @default(false) @map("is_blocked")
+    blockedReason  String?   @map("blocked_reason")
+    blockedAt      DateTime? @map("blocked_at")
+    blockedBy      String?   @map("blocked_by")
+    appealStatus   String?   @map("appeal_status") // null, 'pending', 'approved', 'rejected'
+    appealMessage  String?   @map("appeal_message")
+    appealedAt     DateTime? @map("appealed_at")
+    appealResponse String?   @map("appeal_response")
+    appealReviewedAt DateTime? @map("appeal_reviewed_at")
+    appealReviewedBy String?   @map("appeal_reviewed_by")
     averageRating  Decimal   @default(0) @map("average_rating") @db.Decimal(3, 2)
     totalReviews   Int       @default(0) @map("total_reviews")
     totalSales     Int       @default(0) @map("total_sales")
