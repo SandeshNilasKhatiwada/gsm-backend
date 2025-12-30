@@ -1469,7 +1469,7 @@ export const reviewProductAppeal = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { decision, response } = req.body;
 
-  if (!decision || !['approved', 'rejected'].includes(decision)) {
+  if (!decision || !["approved", "rejected"].includes(decision)) {
     res.status(400);
     throw new Error("Decision must be 'approved' or 'rejected'");
   }

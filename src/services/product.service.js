@@ -186,13 +186,16 @@ class ProductService {
     // Check if user is admin or shop owner/staff
     let isAdmin = false;
     let canAccessShop = false;
-    
+
     if (user) {
       isAdmin = await this.checkIfUserIsAdmin(user.id);
-      
+
       // If filtering by shopId, check if user can access that shop
       if (shopId && !isAdmin) {
-        canAccessShop = await this.checkIfUserCanAccessShopProduct(user.id, shopId);
+        canAccessShop = await this.checkIfUserCanAccessShopProduct(
+          user.id,
+          shopId,
+        );
       }
     }
 
@@ -315,10 +318,13 @@ class ProductService {
       if (user) {
         // Check if user is admin
         const isAdmin = await this.checkIfUserIsAdmin(user.id);
-        
+
         // Check if user owns/manages the shop
-        const canAccessShop = await this.checkIfUserCanAccessShopProduct(user.id, product.shopId);
-        
+        const canAccessShop = await this.checkIfUserCanAccessShopProduct(
+          user.id,
+          product.shopId,
+        );
+
         if (!isAdmin && !canAccessShop) {
           throw new AppError("This product is currently unavailable", 403);
         }
