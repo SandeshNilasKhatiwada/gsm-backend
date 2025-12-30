@@ -98,9 +98,13 @@ router.post("/:shopId/services", auth, createService);
 router.get("/:shopId/services", getShopServices);
 
 // Products
-router.get("/:shopId/products", (req, res, next) => {
-  req.query.shopId = req.params.shopId;
-  next();
-}, getAllProducts);
+router.get(
+  "/:shopId/products",
+  (req, res, next) => {
+    req.query.shopId = req.params.shopId;
+    next();
+  },
+  getAllProducts,
+);
 
 export default router;

@@ -82,8 +82,16 @@ class ShopService {
 
   // Get all shops with pagination and filters
   async getAllShops(query) {
-    const { page, limit, search, category, isVerified, isBlocked, sortBy, ownerId } =
-      query;
+    const {
+      page,
+      limit,
+      search,
+      category,
+      isVerified,
+      isBlocked,
+      sortBy,
+      ownerId,
+    } = query;
     const { skip, take } = getPagination(page, limit);
 
     const where = {
